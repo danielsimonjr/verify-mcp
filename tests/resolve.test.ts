@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { join, sep } from "node:path";
 
 import { VERIFY_GIT_REF } from "../src/pin.ts";
 import { VerifyNotInstalledError, resolveVerifyLaunch } from "../src/resolve.ts";
@@ -11,7 +11,8 @@ describe("resolveVerifyLaunch", () => {
     const launch = resolveVerifyLaunch({ ...process.env, VERIHARNESS_BIN: undefined, VERIHARNESS_DATA: undefined, VERIHARNESS_RUNS: undefined });
     expect(launch.source).toBe("package");
     expect(launch.command).toContain("bun");
-    expect(launch.args[0]).toMatch(/node_modules\/veriharness\/harness\/cli\.ts$/);
+    // Segments, not a "/" pattern: a Windows path separates with "\".
+    expect(launch.args[0]!.split(sep).slice(-4)).toEqual(["node_modules", "veriharness", "harness", "cli.ts"]);
     expect(launch.dataDir).toBe(join(process.cwd(), "data"));
     expect(launch.runsDir).toBe(join(process.cwd(), "runs"));
     expect(launch.env.VERIHARNESS_DATA).toBe(launch.dataDir);
@@ -32,7 +33,7 @@ describe("resolveVerifyLaunch", () => {
     expect(launch.source).toBe("VERIHARNESS_BIN");
     expect(launch.args).toEqual([cli]);
     expect(launch.verifyRoot).toBe(root);
-    expect(launch.dataDir.endsWith("/verify-data-does-not-need-to-exist")).toBe(true);
+    expect(launch.dataDir).toBe(join(homedir(), "verify-data-does-not-need-to-exist"));
     expect(launch.env.VERIHARNESS_DATA).toBe(launch.dataDir);
     expect(launch.env.VERIHARNESS_RUNS).toBeUndefined();
     expect(launch.runsDir).toBe(join(root, "runs"));
