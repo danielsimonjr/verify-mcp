@@ -10,6 +10,8 @@ All notable changes to this project are recorded here. The format follows
 
 - CI runs the tests on `windows-latest` as well as `ubuntu-latest`. The Windows process-tree
   kill and the Windows path handling had no CI coverage.
+- Dependabot proposes weekly bumps for the SHA-pinned GitHub Actions. Dependabot alerts and CodeQL
+  default setup are on for the repository.
 
 ## [0.1.1] - 2026-10-04
 
