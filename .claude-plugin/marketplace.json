@@ -1,6 +1,6 @@
 {
   "name": "verify-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server wrapping danielsimonjr/verify.",
   "owner": {
     "name": "danielsimonjr"
@@ -10,7 +10,7 @@
       "name": "verify-mcp",
       "source": "./plugin",
       "description": "MCP server wrapping danielsimonjr/verify (veriharness).",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "license": "Apache-2.0",
       "homepage": "https://github.com/danielsimonjr/verify-mcp",
       "author": {

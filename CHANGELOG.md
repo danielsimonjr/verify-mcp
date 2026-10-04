@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-04
+
 ### Security
 
 - `verify_runner` rejects a `run_name` or a pool in `cells` that is not one path segment. verify
