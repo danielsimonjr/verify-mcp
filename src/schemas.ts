@@ -1,6 +1,19 @@
 import * as z from "zod";
 
 export const BENCHES = ["apex", "wsb", "wb", "sb2", "jb"] as const;
+/** Lane names in the pinned runner's config.LANES. tests/schemas.test.ts keeps both lists equal to the pin. */
+export const LANES = ["flash", "opus"] as const;
+
+// One path segment. The runner joins run_name and `${bench}_${pool}` under VERIHARNESS_RUNS and
+// deletes an existing task workspace there, so a separator or a leading dot (which covers "." and
+// "..") would reach outside the runs directory.
+const SEGMENT = "[A-Za-z0-9][A-Za-z0-9._-]*";
+const SEGMENT_HELP = "letters, digits, dot, underscore and hyphen, not starting with a dot";
+const CELL = new RegExp(`^(?:${BENCHES.join("|")}):${SEGMENT}$`);
+// The scheduler compares in-flight counts against these caps. A cap that is 0 or not a number
+// never compares true, so the cell's tasks never start and the runner waits forever.
+const CAP = `(?:${[...BENCHES, "default"].join("|")})=[1-9][0-9]*`;
+const CELL_CAP = new RegExp(`^${CAP}(?:,${CAP})*$`);
 
 const timeoutSeconds = z
   .number()
@@ -76,15 +89,22 @@ export type DriverInput = z.infer<typeof driverInput>;
 export const runnerInput = z
   .object({
     cells: z
-      .array(z.string().regex(/^[^:\s]+:[^:\s]+$/, "cell must be bench:pool"))
+      .array(z.string().regex(CELL, `cell must be bench:pool, bench one of ${BENCHES.join(", ")}, pool ${SEGMENT_HELP}`))
       .min(1)
       .describe("Cells to run. Each entry is bench:pool, for example wb:flash."),
-    run_name: z.string().min(1).describe("Run directory name under VERIHARNESS_RUNS."),
+    run_name: z
+      .string()
+      .regex(new RegExp(`^${SEGMENT}$`), `run_name must be one path segment: ${SEGMENT_HELP}`)
+      .describe("Run directory name under VERIHARNESS_RUNS. One path segment."),
     contract: z.enum(["artifact", "pick-only"]).optional(),
-    lane: z.string().min(1).optional().describe("Verifier lane, usually flash or opus."),
+    lane: z.enum(LANES).optional().describe("Verifier lane. Required when a pool is not itself a lane name."),
     max_flash: z.number().int().positive().optional().describe("In-flight cap for the flash lane. Verify's default is 25."),
     max_opus: z.number().int().positive().optional().describe("In-flight cap for the opus lane. Verify's default is 45."),
-    cell_cap: z.string().min(1).optional().describe("Passed as --cell-cap."),
+    cell_cap: z
+      .string()
+      .regex(CELL_CAP, "cell_cap must be key=N[,key=N] with N a positive integer and key a bench name or default")
+      .optional()
+      .describe("In-flight cap per bench, passed as --cell-cap: key=N[,key=N], key a bench name or default."),
     only: z.array(z.string().min(1)).optional().describe("Task keys. Each becomes --only."),
     only_file: z.string().min(1).optional().describe("File of task keys, passed as --only-file."),
     limit: z.number().int().nonnegative().optional(),
@@ -93,7 +113,13 @@ export const runnerInput = z
     seed: z.number().int().nonnegative().optional(),
     turn_timeout: z.number().positive().optional(),
     task_timeout: z.number().positive().optional(),
-    skip_inflight: z.number().nonnegative().optional().describe("Seconds, passed as --skip-inflight. Verify's default is 45."),
+    skip_inflight: z
+      .number()
+      .nonnegative()
+      .optional()
+      .describe(
+        "Minutes, passed as --skip-inflight: a task workspace with activity in the last N minutes is skipped as in flight. Verify's default is 45.",
+      ),
     skill: z.array(z.string().min(1)).optional(),
     no_skills: z.boolean().optional(),
     skills_mode: z.enum(["mounted", "auto"]).optional(),

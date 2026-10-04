@@ -22149,7 +22149,7 @@ function resolveVerifyLaunch(env = process.env, cwd = process.cwd()) {
 }
 
 // src/results.ts
-import { existsSync as existsSync2, readdirSync, readFileSync, realpathSync, statSync } from "fs";
+import { closeSync, existsSync as existsSync2, openSync, readdirSync, readSync, realpathSync, statSync } from "fs";
 import { join as join2, relative, resolve as resolve2, sep as sep2 } from "path";
 var ARTIFACT_PATH = {
   ledger_elim: "ledger_elim.json",
@@ -22227,6 +22227,22 @@ function listDeliverables(dir) {
   walk(dir, "");
   return out;
 }
+function readPrefix(path, maxBytes) {
+  const buf = new Uint8Array(maxBytes + 1);
+  const fd = openSync(path, "r");
+  try {
+    let filled = 0;
+    while (filled < buf.length) {
+      const n = readSync(fd, buf, filled, buf.length - filled, null);
+      if (n === 0)
+        break;
+      filled += n;
+    }
+    return { bytes: buf.subarray(0, Math.min(filled, maxBytes)), truncated: filled > maxBytes };
+  } finally {
+    closeSync(fd);
+  }
+}
 function readArtifact(baseDir, jailRoot, artifact, maxBytes) {
   if (!existsSync2(baseDir))
     throw new ResultPathError(`directory does not exist: ${baseDir}`);
@@ -22250,9 +22266,8 @@ function readArtifact(baseDir, jailRoot, artifact, maxBytes) {
       deliverables
     };
   }
-  const bytes = readFileSync(real);
-  const truncated = bytes.length > maxBytes;
-  const text = new TextDecoder().decode(bytes.subarray(0, maxBytes));
+  const { bytes, truncated } = readPrefix(real, maxBytes);
+  const text = new TextDecoder().decode(bytes);
   let json;
   if (!truncated && JSON_ARTIFACTS.has(artifact)) {
     try {
@@ -22344,14 +22359,41 @@ async function pump(stream, tail, onLine) {
   if (pending.trim() && onLine)
     onLine(pending);
 }
-function killGroup(pid, signal) {
-  try {
-    process.kill(-pid, signal);
-  } catch {
-    try {
-      process.kill(pid, signal);
-    } catch {}
+function descendants(root) {
+  const ps = Bun.spawnSync(["ps", "-A", "-o", "pid=,ppid="], { stdout: "pipe", stderr: "ignore" });
+  if (ps.exitCode !== 0)
+    return [];
+  const children = new Map;
+  for (const line of ps.stdout.toString().split(`
+`)) {
+    const [pid, ppid] = line.trim().split(/\s+/).map(Number);
+    if (!pid || ppid === undefined || Number.isNaN(ppid))
+      continue;
+    const list = children.get(ppid) ?? [];
+    list.push(pid);
+    children.set(ppid, list);
   }
+  const out = [];
+  const stack = [root];
+  while (stack.length) {
+    for (const child of children.get(stack.pop()) ?? []) {
+      out.push(child);
+      stack.push(child);
+    }
+  }
+  return out;
+}
+function signalTree(pid, tree, signal) {
+  for (const target of [pid, ...tree]) {
+    for (const id of [-target, target]) {
+      try {
+        process.kill(id, signal);
+      } catch {}
+    }
+  }
+}
+function killTreeWindows(pid) {
+  Bun.spawnSync(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
 }
 async function runProcess(req) {
   const started = Date.now();
@@ -22369,12 +22411,19 @@ async function runProcess(req) {
   const readers = Promise.all([pump(proc.stdout, stdout, req.onLine), pump(proc.stderr, stderr, req.onLine)]);
   let killTimer;
   const stop = (why) => {
+    if (timedOut || aborted)
+      return;
     if (why === "timeout")
       timedOut = true;
     else
       aborted = true;
-    killGroup(proc.pid, "SIGTERM");
-    killTimer = setTimeout(() => killGroup(proc.pid, "SIGKILL"), 2000);
+    if (process.platform === "win32") {
+      killTreeWindows(proc.pid);
+      return;
+    }
+    const tree = descendants(proc.pid);
+    signalTree(proc.pid, tree, "SIGTERM");
+    killTimer = setTimeout(() => signalTree(proc.pid, tree, "SIGKILL"), 2000);
     killTimer.unref?.();
   };
   const timer = setTimeout(() => stop("timeout"), req.timeoutMs);
@@ -22683,6 +22732,12 @@ var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/ver
 
 // src/schemas.ts
 var BENCHES = ["apex", "wsb", "wb", "sb2", "jb"];
+var LANES = ["flash", "opus"];
+var SEGMENT = "[A-Za-z0-9][A-Za-z0-9._-]*";
+var SEGMENT_HELP = "letters, digits, dot, underscore and hyphen, not starting with a dot";
+var CELL = new RegExp(`^(?:${BENCHES.join("|")}):${SEGMENT}$`);
+var CAP = `(?:${[...BENCHES, "default"].join("|")})=[1-9][0-9]*`;
+var CELL_CAP = new RegExp(`^${CAP}(?:,${CAP})*$`);
 var timeoutSeconds = number2().positive().optional().describe("Wall-clock timeout for this call, in seconds. Overrides the tool default.");
 var localModelShape = {
   provider: string2().min(1).optional().describe("Model provider. Local servers: ollama, or llamacpp (aliases llama.cpp and llama-cpp)."),
@@ -22721,13 +22776,13 @@ var driverInput = object({
   ...localModelShape
 }).strict();
 var runnerInput = object({
-  cells: array(string2().regex(/^[^:\s]+:[^:\s]+$/, "cell must be bench:pool")).min(1).describe("Cells to run. Each entry is bench:pool, for example wb:flash."),
-  run_name: string2().min(1).describe("Run directory name under VERIHARNESS_RUNS."),
+  cells: array(string2().regex(CELL, `cell must be bench:pool, bench one of ${BENCHES.join(", ")}, pool ${SEGMENT_HELP}`)).min(1).describe("Cells to run. Each entry is bench:pool, for example wb:flash."),
+  run_name: string2().regex(new RegExp(`^${SEGMENT}$`), `run_name must be one path segment: ${SEGMENT_HELP}`).describe("Run directory name under VERIHARNESS_RUNS. One path segment."),
   contract: _enum(["artifact", "pick-only"]).optional(),
-  lane: string2().min(1).optional().describe("Verifier lane, usually flash or opus."),
+  lane: _enum(LANES).optional().describe("Verifier lane. Required when a pool is not itself a lane name."),
   max_flash: number2().int().positive().optional().describe("In-flight cap for the flash lane. Verify's default is 25."),
   max_opus: number2().int().positive().optional().describe("In-flight cap for the opus lane. Verify's default is 45."),
-  cell_cap: string2().min(1).optional().describe("Passed as --cell-cap."),
+  cell_cap: string2().regex(CELL_CAP, "cell_cap must be key=N[,key=N] with N a positive integer and key a bench name or default").optional().describe("In-flight cap per bench, passed as --cell-cap: key=N[,key=N], key a bench name or default."),
   only: array(string2().min(1)).optional().describe("Task keys. Each becomes --only."),
   only_file: string2().min(1).optional().describe("File of task keys, passed as --only-file."),
   limit: number2().int().nonnegative().optional(),
@@ -22736,7 +22791,7 @@ var runnerInput = object({
   seed: number2().int().nonnegative().optional(),
   turn_timeout: number2().positive().optional(),
   task_timeout: number2().positive().optional(),
-  skip_inflight: number2().nonnegative().optional().describe("Seconds, passed as --skip-inflight. Verify's default is 45."),
+  skip_inflight: number2().nonnegative().optional().describe("Minutes, passed as --skip-inflight: a task workspace with activity in the last N minutes is skipped as in flight. Verify's default is 45."),
   skill: array(string2().min(1)).optional(),
   no_skills: boolean2().optional(),
   skills_mode: _enum(["mounted", "auto"]).optional(),
@@ -22827,19 +22882,19 @@ function createVerifyServer(deps = defaultDeps()) {
     title: "Run one task",
     description: "Run `veriharness driver` on one task workspace. The directory must contain rollouts/. " + "Flags are forwarded only when you set them, so verify keeps its own defaults. " + `Negotiated MCP revision when the client asks for it: ${PROTOCOL_VERSION}.`,
     inputSchema: driverInput,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
   }, async (args, ctx) => call(handleDriver(args, deps, progressFrom(ctx))));
   server.registerTool("verify_runner", {
     title: "Batch-run cells",
     description: "Run `veriharness runner` for one or more bench:pool cells under a run name. " + "Requires cells and run_name. Default wall clock is 4 hours.",
     inputSchema: runnerInput,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
   }, async (args, ctx) => call(handleRunner(args, deps, progressFrom(ctx))));
   server.registerTool("verify_score", {
     title: "Score a cell",
     description: "Run `veriharness score` on a cell directory. Passes --json unless json is false, " + "and returns the trailing JSON summary as structured content.",
     inputSchema: scoreInput,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
   }, async (args, ctx) => call(handleScore(args, deps, progressFrom(ctx))));
   server.registerTool("verify_grade", {
     title: "Grade deliverables",
@@ -22851,7 +22906,7 @@ function createVerifyServer(deps = defaultDeps()) {
     title: "Materialize task workspaces",
     description: "Run `veriharness materialize <bench>`. Builds task workspaces from the benchmark archive " + "into VERIHARNESS_DATA. Needs VERIHARNESS_BENCH_ROOT when the archive is not already local.",
     inputSchema: materializeInput,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false }
   }, async (args, ctx) => call(handleMaterialize(args, deps, progressFrom(ctx))));
   server.registerTool("verify_env_derive", {
     title: "Derive task images",

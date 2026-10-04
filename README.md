@@ -41,7 +41,7 @@ If neither exists, the tool returns an error that names the pin, `bun install`, 
 
 When the resolved checkout is `node_modules/veriharness` and you did not set `VERIHARNESS_DATA` or `VERIHARNESS_RUNS`, those directories default to `./data` and `./runs` in the server’s working directory. That keeps run output out of `node_modules`. A real checkout keeps verify’s own defaults unless you set the variables. `~` is expanded, and a value you set is passed through as an absolute path.
 
-Long tools send `notifications/progress` (monotonic, throttled, with a 15s heartbeat) and are killed by process group on timeout or client cancel. The tool result keeps the last 64KiB of stdout and stderr.
+Long tools send `notifications/progress` (monotonic, throttled, with a 15s heartbeat) and on timeout or client cancel they are killed with their whole process tree, including the detached children that verify's driver starts for each agent turn. The tool result keeps the last 64KiB of stdout and stderr.
 
 ## Requirements
 
@@ -76,9 +76,13 @@ bun src/index.ts
 
 Benches are `apex`, `wsb`, `wb`, `sb2`, and `jb`. Optional flags are forwarded only when you set them, so verify keeps its own defaults (`--contract artifact`, `--env jail`, `--skills-mode mounted`, turn timeout 1800s, nudge timeout 600s, task timeout 3600s, flash lane cap 25, opus lane cap 45).
 
+`verify_runner` rejects input that verify would act on unsafely. A `run_name` and each pool in `cells` must be one path segment: letters, digits, `.`, `_` and `-`, not starting with a dot. verify joins both under `VERIHARNESS_RUNS` and deletes an existing task workspace there. `lane` must be `flash` or `opus`. Each `cell_cap` entry must be `key=N`, with `key` a bench or `default` and `N` 1 or more, because a cap of 0 or a non-number stops the cell's tasks from starting. `skip_inflight` is in minutes.
+
+`verify_driver`, `verify_runner`, `verify_score` and `verify_materialize` carry `destructiveHint: true`. They overwrite or delete files under the task or runs directory.
+
 Local providers: `ollama` (aliases none; default `http://127.0.0.1:11434`) and `llamacpp` (aliases `llama.cpp` and `llama-cpp`; default `http://127.0.0.1:8080`). Both need `model`. verify also accepts its cloud providers on `provider` / `model`; this server does not add any of its own.
 
-`verify_read_result` artifacts: `ledger_elim`, `ledger_fals`, `finish`, `repair`, `driver_log`, `run`, `scores`, `scores_partial`, `deliverables`. `deliverables` returns names and sizes under `out/deliverables`, not file bytes. Paths with `..` or a symlink that leaves the runs root or the task directory are rejected.
+`verify_read_result` artifacts: `ledger_elim`, `ledger_fals`, `finish`, `repair`, `driver_log`, `run`, `scores`, `scores_partial`, `deliverables`. `deliverables` returns names and sizes under `out/deliverables`, not file bytes. A text artifact returns at most `max_bytes` (default 262144), and the server reads only that prefix of the file. Paths with `..` or a symlink that leaves the runs root or the task directory are rejected.
 
 ### Timeouts
 

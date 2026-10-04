@@ -52,6 +52,11 @@ describe("MCP protocol", () => {
 
       const listed = await mcp.listTools();
       expect(listed.tools.map((tool) => tool.name).sort()).toEqual([...TOOL_NAMES].sort());
+      // destructiveHint false means "additive updates only". These four overwrite or delete files:
+      // the driver rewrites MISSION.md and finish.json, the runner and materialize remove existing
+      // task workspaces, and score replaces scores.json.
+      const destructive = listed.tools.filter((tool) => tool.annotations?.destructiveHint).map((tool) => tool.name);
+      expect(destructive.sort()).toEqual(["verify_driver", "verify_materialize", "verify_runner", "verify_score"]);
 
       const checked = await mcp.callTool({
         name: "verify_model_check",

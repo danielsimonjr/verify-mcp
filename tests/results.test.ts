@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { listRuns, readArtifact, ResultPathError, resultBase } from "../src/results.ts";
+import { listRuns, readArtifact, readPrefix, ResultPathError, resultBase } from "../src/results.ts";
 
 describe("results", () => {
   test("lists runs and reads a jailed artifact", () => {
@@ -34,5 +34,26 @@ describe("results", () => {
     expect(() => resultBase({ runsDir: root, run: "nightly", cell: "../nightly" })).toThrow(ResultPathError);
     const located = resultBase({ runsDir: root, run: "nightly", cell: "escape" });
     expect(() => readArtifact(located.baseDir, located.jailRoot, "finish", 100)).toThrow(ResultPathError);
+  });
+
+  test("truncates an artifact larger than max_bytes", () => {
+    const root = mkdtempSync(join(tmpdir(), "verify-trunc-"));
+    const cell = join(root, "nightly", "wb_flash");
+    mkdirSync(cell, { recursive: true });
+    writeFileSync(join(cell, "driver.log"), "x".repeat(5000));
+    const located = resultBase({ runsDir: root, run: "nightly", cell: "wb_flash" });
+    const log = readArtifact(located.baseDir, located.jailRoot, "driver_log", 100);
+    expect(log.truncated).toBe(true);
+    expect(log.text.length).toBe(100);
+    const whole = readArtifact(located.baseDir, located.jailRoot, "driver_log", 5000);
+    expect(whole.truncated).toBe(false);
+    expect(whole.text.length).toBe(5000);
+  });
+
+  // /dev/zero never ends, so a reader that loads the whole file before slicing never returns.
+  test.skipIf(process.platform === "win32")("reads at most max_bytes + 1 bytes", () => {
+    const head = readPrefix("/dev/zero", 16);
+    expect(head.truncated).toBe(true);
+    expect(head.bytes.length).toBe(16);
   });
 });

@@ -6,7 +6,31 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- `verify_runner` rejects a `run_name` or a pool in `cells` that is not one path segment. verify
+  joins both under `VERIHARNESS_RUNS` and deletes an existing task workspace there, so a value
+  such as `../x` or `wb:..` made the runner delete directories outside the runs directory. A
+  segment is letters, digits, `.`, `_` and `-`, not starting with a dot.
+- A timeout or a client cancel kills the whole process tree. verify's driver starts each agent
+  turn as a detached child, which leads its own process group on POSIX and leaves the parent's
+  job object on Windows, so the old group kill left the turn running. POSIX now takes a `ps`
+  snapshot of the descendants before it signals them; Windows uses `taskkill /T /F`.
+
 ### Fixed
+
+- `verify_runner` rejects a `lane` other than `flash` or `opus` and a `cell_cap` entry whose cap is
+  below 1 or whose key is not a bench or `default`. verify accepted both, and its scheduler then
+  never started the cell's tasks and waited forever.
+- The `skip_inflight` description gives the unit as minutes. It said seconds.
+- `verify_read_result` reads at most `max_bytes` plus one byte of a text artifact. It read the
+  whole file to return the prefix, so a large `driver.log` blocked the server and could exhaust
+  its memory.
+- `verify_driver`, `verify_runner`, `verify_score` and `verify_materialize` carry
+  `destructiveHint: true`. They overwrite or delete files, and `false` declares additive changes
+  only.
+- A call that times out and is then cancelled is stopped once. The second stop armed a `SIGKILL`
+  timer that was never cleared and fired at a stale list of process IDs.
 
 - The Claude Code plugin installs and starts from a marketplace. It was the repository root, and
   `.mcp.json` launched `bun` on `src/index.ts`. A plugin cache clone has no `node_modules`, so the

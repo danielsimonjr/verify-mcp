@@ -105,7 +105,7 @@ export function createVerifyServer(deps: Deps = defaultDeps()): McpServer {
         "Flags are forwarded only when you set them, so verify keeps its own defaults. " +
         `Negotiated MCP revision when the client asks for it: ${PROTOCOL_VERSION}.`,
       inputSchema: driverInput,
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     },
     async (args, ctx: ServerContext) => call(handleDriver(args, deps, progressFrom(ctx))),
   );
@@ -118,7 +118,7 @@ export function createVerifyServer(deps: Deps = defaultDeps()): McpServer {
         "Run `veriharness runner` for one or more bench:pool cells under a run name. " +
         "Requires cells and run_name. Default wall clock is 4 hours.",
       inputSchema: runnerInput,
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     },
     async (args, ctx) => call(handleRunner(args, deps, progressFrom(ctx))),
   );
@@ -131,7 +131,7 @@ export function createVerifyServer(deps: Deps = defaultDeps()): McpServer {
         "Run `veriharness score` on a cell directory. Passes --json unless json is false, " +
         "and returns the trailing JSON summary as structured content.",
       inputSchema: scoreInput,
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     },
     async (args, ctx) => call(handleScore(args, deps, progressFrom(ctx))),
   );
@@ -155,7 +155,7 @@ export function createVerifyServer(deps: Deps = defaultDeps()): McpServer {
         "Run `veriharness materialize <bench>`. Builds task workspaces from the benchmark archive " +
         "into VERIHARNESS_DATA. Needs VERIHARNESS_BENCH_ROOT when the archive is not already local.",
       inputSchema: materializeInput,
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
     async (args, ctx) => call(handleMaterialize(args, deps, progressFrom(ctx))),
   );

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { closeSync, existsSync, openSync, readdirSync, readSync, realpathSync, statSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 
 import type { ArtifactName } from "./schemas.ts";
@@ -100,6 +100,27 @@ function listDeliverables(dir: string): Array<{ name: string; bytes: number }> {
   return out;
 }
 
+/**
+ * The first `maxBytes` of a file, and whether more follows. Reads at most `maxBytes + 1` bytes:
+ * a driver.log can run to gigabytes, and loading it whole to return a small slice blocks the
+ * server and can exhaust its memory.
+ */
+export function readPrefix(path: string, maxBytes: number): { bytes: Uint8Array; truncated: boolean } {
+  const buf = new Uint8Array(maxBytes + 1);
+  const fd = openSync(path, "r");
+  try {
+    let filled = 0;
+    while (filled < buf.length) {
+      const n = readSync(fd, buf, filled, buf.length - filled, null);
+      if (n === 0) break;
+      filled += n;
+    }
+    return { bytes: buf.subarray(0, Math.min(filled, maxBytes)), truncated: filled > maxBytes };
+  } finally {
+    closeSync(fd);
+  }
+}
+
 export function readArtifact(baseDir: string, jailRoot: string, artifact: ArtifactName, maxBytes: number): ReadResult {
   if (!existsSync(baseDir)) throw new ResultPathError(`directory does not exist: ${baseDir}`);
   const baseReal = jail(jailRoot, baseDir);
@@ -119,9 +140,8 @@ export function readArtifact(baseDir: string, jailRoot: string, artifact: Artifa
       deliverables,
     };
   }
-  const bytes = readFileSync(real);
-  const truncated = bytes.length > maxBytes;
-  const text = new TextDecoder().decode(bytes.subarray(0, maxBytes));
+  const { bytes, truncated } = readPrefix(real, maxBytes);
+  const text = new TextDecoder().decode(bytes);
   let json: unknown;
   if (!truncated && JSON_ARTIFACTS.has(artifact)) {
     try {
