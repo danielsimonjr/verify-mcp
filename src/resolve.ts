@@ -1,0 +1,157 @@
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import { homedir } from "node:os";
+import { dirname, join, resolve, sep } from "node:path";
+
+import { VERIFY_GIT_REF, VERIFY_GIT_SPEC } from "./pin.ts";
+
+const require = createRequire(import.meta.url);
+
+export class VerifyNotInstalledError extends Error {
+  constructor(detail: string) {
+    super(
+      `verify is not installed. ${detail} verify-mcp pins veriharness to ${VERIFY_GIT_SPEC} ` +
+        `(commit ${VERIFY_GIT_REF}). Run \`bun install\` in the verify-mcp directory, or set ` +
+        `VERIHARNESS_BIN to the veriharness executable or to harness/cli.ts.`,
+    );
+    this.name = "VerifyNotInstalledError";
+  }
+}
+
+export interface VerifyLaunch {
+  command: string;
+  args: string[];
+  cwd: string;
+  env: Record<string, string>;
+  source: "VERIHARNESS_BIN" | "package";
+  binPath: string;
+  verifyRoot: string;
+  dataDir: string;
+  runsDir: string;
+}
+
+export function envRecord(base: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(base)) {
+    if (typeof value === "string") out[key] = value;
+  }
+  return out;
+}
+
+export function expandHome(path: string): string {
+  if (path === "~") return homedir();
+  if (path.startsWith("~/")) return join(homedir(), path.slice(2));
+  return path;
+}
+
+function looksLikeBun(path: string): boolean {
+  return (path.split(sep).pop() ?? "").includes("bun");
+}
+
+export function resolveBun(env: NodeJS.ProcessEnv = process.env): string {
+  const fromEnv = env.BUN_BIN;
+  if (typeof fromEnv === "string" && fromEnv.length > 0) {
+    const expanded = resolve(expandHome(fromEnv));
+    if (!existsSync(expanded)) {
+      throw new VerifyNotInstalledError(`BUN_BIN=${fromEnv} does not exist.`);
+    }
+    return expanded;
+  }
+  const which = Bun.which("bun");
+  if (which) return which;
+  if (looksLikeBun(process.execPath) && existsSync(process.execPath)) return process.execPath;
+  throw new VerifyNotInstalledError("Bun is not on PATH. Install Bun from https://bun.sh and retry.");
+}
+
+function isPackagedRoot(verifyRoot: string): boolean {
+  const parts = resolve(verifyRoot).split(sep);
+  return parts.includes("node_modules") && parts[parts.length - 1] === "veriharness";
+}
+
+export function harnessLocations(
+  verifyRoot: string,
+  env: NodeJS.ProcessEnv,
+  cwd: string,
+): { env: Record<string, string>; dataDir: string; runsDir: string } {
+  const child = envRecord(env);
+  const packaged = isPackagedRoot(verifyRoot);
+  const dataRaw = env.VERIHARNESS_DATA;
+  const runsRaw = env.VERIHARNESS_RUNS;
+  const dataSet = typeof dataRaw === "string" && dataRaw.length > 0;
+  const runsSet = typeof runsRaw === "string" && runsRaw.length > 0;
+  const dataDir = dataSet
+    ? resolve(expandHome(dataRaw))
+    : packaged
+      ? resolve(cwd, "data")
+      : resolve(verifyRoot, "data");
+  const runsDir = runsSet
+    ? resolve(expandHome(runsRaw))
+    : packaged
+      ? resolve(cwd, "runs")
+      : resolve(verifyRoot, "runs");
+  if (dataSet || packaged) child.VERIHARNESS_DATA = dataDir;
+  if (runsSet || packaged) child.VERIHARNESS_RUNS = runsDir;
+  return { env: child, dataDir, runsDir };
+}
+
+function rootFromBin(binPath: string): string {
+  const normalized = resolve(binPath);
+  if (normalized.endsWith(`${sep}harness${sep}cli.ts`) || normalized.endsWith(`${sep}harness${sep}cli.js`)) {
+    return resolve(normalized, "..", "..");
+  }
+  return dirname(normalized);
+}
+
+export function resolveVerifyLaunch(env: NodeJS.ProcessEnv = process.env, cwd = process.cwd()): VerifyLaunch {
+  const bun = resolveBun(env);
+  const configured = env.VERIHARNESS_BIN;
+  let command: string;
+  let args: string[];
+  let binPath: string;
+  let source: VerifyLaunch["source"];
+  let verifyRoot: string;
+
+  if (typeof configured === "string" && configured.length > 0) {
+    binPath = resolve(expandHome(configured));
+    if (!existsSync(binPath)) {
+      throw new VerifyNotInstalledError(`VERIHARNESS_BIN=${configured} does not exist.`);
+    }
+    source = "VERIHARNESS_BIN";
+    verifyRoot = rootFromBin(binPath);
+    if (/\.(ts|tsx|mts|cts|js|mjs|cjs)$/.test(binPath)) {
+      command = bun;
+      args = [binPath];
+    } else {
+      command = binPath;
+      args = [];
+    }
+  } else {
+    let pkgJson: string;
+    try {
+      pkgJson = require.resolve("veriharness/package.json");
+    } catch {
+      throw new VerifyNotInstalledError("The veriharness package is not installed.");
+    }
+    verifyRoot = dirname(pkgJson);
+    binPath = join(verifyRoot, "harness", "cli.ts");
+    if (!existsSync(binPath)) {
+      throw new VerifyNotInstalledError(`Expected the CLI at ${binPath}.`);
+    }
+    command = bun;
+    args = [binPath];
+    source = "package";
+  }
+
+  const locations = harnessLocations(verifyRoot, env, cwd);
+  return {
+    command,
+    args,
+    cwd,
+    env: locations.env,
+    source,
+    binPath,
+    verifyRoot,
+    dataDir: locations.dataDir,
+    runsDir: locations.runsDir,
+  };
+}

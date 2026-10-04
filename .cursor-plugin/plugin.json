@@ -1,0 +1,15 @@
+{
+  "name": "verify-mcp",
+  "displayName": "verify",
+  "description": "MCP server wrapping danielsimonjr/verify (veriharness).",
+  "version": "0.1.0",
+  "author": {
+    "name": "danielsimonjr"
+  },
+  "homepage": "https://github.com/danielsimonjr/verify-mcp",
+  "repository": "https://github.com/danielsimonjr/verify-mcp",
+  "license": "Apache-2.0",
+  "keywords": ["mcp", "verify", "veriharness"],
+  "skills": "./skills/verify",
+  "mcpServers": "./mcp.cursor.json"
+}
