@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "verify": {
+      "command": "bun",
+      "args": ["${CURSOR_PLUGIN_ROOT}/src/index.ts"]
+    }
+  }
+}

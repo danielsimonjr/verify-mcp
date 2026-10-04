@@ -1,0 +1,23 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "verify-mcp",
+  "version": "0.1.0",
+  "description": "MCP server wrapping danielsimonjr/verify (veriharness).",
+  "author": {
+    "name": "danielsimonjr"
+  },
+  "homepage": "https://github.com/danielsimonjr/verify-mcp",
+  "repository": "https://github.com/danielsimonjr/verify-mcp",
+  "license": "Apache-2.0",
+  "keywords": ["mcp", "verify", "veriharness"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "verify",
+        "shortDescription": "Run the verify harness from your agent.",
+        "developerName": "danielsimonjr",
+        "category": "Productivity"
+      }
+    }
+  }
+}
