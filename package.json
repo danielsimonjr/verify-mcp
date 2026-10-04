@@ -17,6 +17,7 @@
   },
   "scripts": {
     "start": "bun src/index.ts",
+    "bundle": "bun scripts/bundle.ts",
     "dev": "bun src/index.ts",
     "typecheck": "bunx tsc -p tsconfig.json --noEmit",
     "test": "bun test"

@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "verify-mcp",
-      "source": "./",
+      "source": "./plugin",
       "description": "MCP server wrapping danielsimonjr/verify (veriharness).",
       "version": "0.1.0",
       "license": "Apache-2.0",

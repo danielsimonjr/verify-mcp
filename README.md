@@ -102,27 +102,32 @@ Local providers: `ollama` (aliases none; default `http://127.0.0.1:11434`) and `
 
 ## Plugins
 
-Bun must be on `PATH`. Each manifest launches `bun` on `src/index.ts`. Formats were checked against the pages and schemas below; the copies used in CI are in `tests/fixtures/`.
+Bun must be on `PATH`. The Codex and Cursor manifests launch `bun` on `src/index.ts`. The Claude Code plugin launches a committed bundle (see below). Formats were checked against the pages and schemas below; the copies used in CI are in `tests/fixtures/`.
 
 ### Claude Code
 
+The Claude Code plugin is the `plugin/` folder. Claude Code serves a plugin from a cache clone and does not run `bun install` there, so `src/index.ts` cannot resolve its imports. `plugin/.mcp.json` launches a self-contained bundle instead.
+
 | File | Role | Checked against |
 | --- | --- | --- |
-| `.claude-plugin/plugin.json` | Plugin manifest | [Plugins reference](https://code.claude.com/docs/en/plugins-reference) and [claude-code-plugin-manifest.json](https://json.schemastore.org/claude-code-plugin-manifest.json) |
-| `.mcp.json` | MCP server. Auto-discovered, so `plugin.json` does not also set `mcpServers` | same reference (`.mcp.json` is loaded in addition to `mcpServers`) |
-| `.claude-plugin/marketplace.json` | Marketplace entry with `source` `"./"` | [Create a marketplace](https://code.claude.com/docs/en/plugin-marketplaces) and [claude-code-marketplace.json](https://json.schemastore.org/claude-code-marketplace.json) |
-| `skills/verify/SKILL.md` | Skill | discovered from `skills/` |
-| `commands/verify.md` | Slash command | discovered from `commands/` |
+| `plugin/.claude-plugin/plugin.json` | Plugin manifest | [Plugins reference](https://code.claude.com/docs/en/plugins-reference) and [claude-code-plugin-manifest.json](https://json.schemastore.org/claude-code-plugin-manifest.json) |
+| `plugin/.mcp.json` | MCP server: `bun ${CLAUDE_PLUGIN_ROOT}/bundle/index.mjs`. Auto-discovered, so `plugin.json` does not also set `mcpServers` | same reference (`.mcp.json` is loaded in addition to `mcpServers`) |
+| `plugin/bundle/index.mjs` | The server and its npm dependencies, built by `bun run bundle` | `tests/bundle.test.ts` compares it with a fresh build and starts it with no `node_modules` in reach |
+| `.claude-plugin/marketplace.json` | Marketplace entry with `source` `"./plugin"` | [Create a marketplace](https://code.claude.com/docs/en/plugin-marketplaces) and [claude-code-marketplace.json](https://json.schemastore.org/claude-code-marketplace.json) |
+| `plugin/skills/verify/SKILL.md` | Skill, copied from `skills/` by `bun run bundle` | discovered from `skills/` |
+| `plugin/commands/verify.md` | Slash command, copied from `commands/` by `bun run bundle` | discovered from `commands/` |
 
-`.mcp.json` uses `${CLAUDE_PLUGIN_ROOT}`.
+The bundle targets Bun, because the server calls `Bun.spawn`, `Bun.which` and `Bun.serve`.
+
+The bundle does not contain the veriharness CLI. The server spawns the CLI, and the CLI reads asset folders next to itself. `plugin/.mcp.json` sets `VERIHARNESS_BIN` to `~/Github/verify/harness/cli.ts`. Clone [danielsimonjr/verify](https://github.com/danielsimonjr/verify) to that path, at the pinned commit or later, and run `bun install` in it. Run output then goes to the checkout's `data/` and `runs/`, which verify ignores. To use a checkout at a different path, edit `plugin/.mcp.json`.
 
 Local, from a checkout:
 
 ```bash
-claude --plugin-dir /path/to/verify-mcp
+claude --plugin-dir /path/to/verify-mcp/plugin
 ```
 
-From GitHub, after this repository is on the default branch:
+From GitHub:
 
 ```bash
 claude plugin marketplace add danielsimonjr/verify-mcp
@@ -185,7 +190,10 @@ This repo contains both a root Agent Plugin and a Cursor plugin, because each ho
 bun install
 bun run typecheck
 bun test
+bun run bundle   # after a change to src/, commands/ or skills/
 ```
+
+Commit the rebuilt `plugin/` with the change. `tests/bundle.test.ts` fails while `plugin/` is stale.
 
 CI is [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `oven-sh/setup-bun`, `bun install --frozen-lockfile`, `bun run typecheck`, `bun test`.
 

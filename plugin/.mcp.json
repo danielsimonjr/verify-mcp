@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "verify": {
+      "type": "stdio",
+      "command": "bun",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bundle/index.mjs"],
+      "env": {
+        "VERIHARNESS_BIN": "~/Github/verify/harness/cli.ts"
+      }
+    }
+  }
+}

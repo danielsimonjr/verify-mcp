@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const addFormats = require("ajv-formats") as (ajv: Ajv) => Ajv;
 
 import { VERIFY_GIT_REF } from "../src/pin.ts";
-import { PROTOCOL_VERSION } from "../src/protocol.ts";
+import { PROTOCOL_VERSION, SERVER_VERSION } from "../src/protocol.ts";
 
 const ROOT = join(import.meta.dir, "..");
 
@@ -44,7 +44,7 @@ function mcpCommands(document: { mcpServers: Record<string, { command?: string; 
 describe("manifests", () => {
   test("claude, cursor, and agent plugin files match their published schemas", () => {
     const ajv = draft07();
-    assertValid(ajv, "tests/fixtures/claude-plugin.schema.json", readJson(".claude-plugin/plugin.json"));
+    assertValid(ajv, "tests/fixtures/claude-plugin.schema.json", readJson("plugin/.claude-plugin/plugin.json"));
     assertValid(ajv, "tests/fixtures/claude-marketplace.schema.json", readJson(".claude-plugin/marketplace.json"));
     assertValid(ajv, "tests/fixtures/cursor-plugin.schema.json", readJson(".cursor-plugin/plugin.json"));
     const modern = draft2020();
@@ -52,19 +52,32 @@ describe("manifests", () => {
     assertValid(modern, "tests/fixtures/agent-mcp.schema.json", readJson("mcp.json"));
   });
 
-  test("every MCP registration launches bun on src/index.ts", () => {
-    const claude = readJson(".mcp.json") as { mcpServers: Record<string, { command: string; args: string[] }> };
+  test("the Claude Code plugin is plugin/ and launches the committed bundle on bun", () => {
+    // A plugin cache clone has no node_modules, so src/index.ts cannot resolve its imports there.
+    const marketplace = readJson(".claude-plugin/marketplace.json") as { plugins: Array<{ source: string }> };
+    expect(marketplace.plugins.map((plugin) => plugin.source)).toEqual(["./plugin"]);
+    const claude = readJson("plugin/.mcp.json") as {
+      mcpServers: Record<string, { command: string; args: string[]; env?: Record<string, string> }>;
+    };
+    expect(Object.keys(claude.mcpServers)).toEqual(["verify"]);
+    const server = claude.mcpServers.verify!;
+    expect(server.command).toBe("bun");
+    expect(server.args).toEqual(["${CLAUDE_PLUGIN_ROOT}/bundle/index.mjs"]);
+    // The CLI is spawned from a real checkout; it is not in the bundle.
+    expect(server.env?.VERIHARNESS_BIN?.endsWith("/harness/cli.ts")).toBe(true);
+  });
+
+  test("the Codex and Cursor registrations launch bun on src/index.ts", () => {
     const cursor = readJson("mcp.cursor.json") as { mcpServers: Record<string, { command: string; args: string[] }> };
     const codex = readJson("mcp.json") as {
       mcpServers: Record<string, { command: string; args: string[]; type: string; cwd: string }>;
     };
-    for (const entry of [...mcpCommands(claude), ...mcpCommands(cursor), ...mcpCommands(codex)]) {
+    for (const entry of [...mcpCommands(cursor), ...mcpCommands(codex)]) {
       expect(entry.command).toBe("bun");
       expect(entry.args.join(" ")).toContain("src/index.ts");
       expect(entry.args.join(" ")).not.toContain("dist/");
       expect(entry.command).not.toBe("node");
     }
-    expect(claude.mcpServers.verify?.args[0]).toContain("${CLAUDE_PLUGIN_ROOT}");
     expect(cursor.mcpServers.verify?.args[0]).toContain("${CURSOR_PLUGIN_ROOT}");
     expect(codex.mcpServers.verify?.type).toBe("stdio");
     expect(codex.mcpServers.verify?.cwd).toBe("./");
@@ -83,5 +96,21 @@ describe("manifests", () => {
     expect(PROTOCOL_VERSION).toBe("2026-07-28");
     const pin = readFileSync(join(ROOT, "src", "pin.ts"), "utf8");
     expect(pin).toContain(VERIFY_GIT_REF);
+  });
+
+  test("every manifest carries the package.json version", () => {
+    // Claude Code caches a plugin per version, so a manifest left behind on a bump ships nothing.
+    const version = (readJson("package.json") as { version: string }).version;
+    const marketplace = readJson(".claude-plugin/marketplace.json") as { version: string; plugins: Array<{ version: string }> };
+    const found: Record<string, string> = {
+      "plugin.json": (readJson("plugin.json") as { version: string }).version,
+      ".codex-plugin/plugin.json": (readJson(".codex-plugin/plugin.json") as { version: string }).version,
+      ".cursor-plugin/plugin.json": (readJson(".cursor-plugin/plugin.json") as { version: string }).version,
+      "plugin/.claude-plugin/plugin.json": (readJson("plugin/.claude-plugin/plugin.json") as { version: string }).version,
+      ".claude-plugin/marketplace.json": marketplace.version,
+      ".claude-plugin/marketplace.json plugins[0]": marketplace.plugins[0]!.version,
+      "src/protocol.ts SERVER_VERSION": SERVER_VERSION,
+    };
+    for (const [where, value] of Object.entries(found)) expect(`${where}: ${value}`).toBe(`${where}: ${version}`);
   });
 });
