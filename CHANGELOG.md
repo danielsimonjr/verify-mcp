@@ -6,6 +6,13 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The detached-grandchild test stops the run when the grandchild has started, not after a fixed
+  1.5 s timeout. Two Bun cold starts can take longer than 1.5 s on a loaded host; the stop then
+  came before the grandchild existed, and the test failed in a full run but passed alone. A
+  negative control (taskkill without `/T`) still fails it.
+
 ### Changed
 
 - The README is written for a user of the server. It explains what verify does, gives a quick start
