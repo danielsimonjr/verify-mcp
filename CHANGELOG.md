@@ -8,6 +8,12 @@ All notable changes to this project are recorded here. The format follows
 
 ### Changed
 
+- The README is written for a user of the server. It explains what verify does, gives a quick start
+  in Claude Code (a verify checkout, its pi runtime, the plugin, a first task), describes the task
+  workspace and each output file, and adds workflows, a defaults table, a Windows section, a
+  security section and a source map. It now states that the driver needs pi
+  (`harness/scripts/setup_pi.sh`), that `env: "none"` is required off Linux, and that an MCP host
+  can start the server with a reduced environment.
 - CI runs the tests on `windows-latest` as well as `ubuntu-latest`. The Windows process-tree
   kill and the Windows path handling had no CI coverage.
 - Dependabot proposes weekly bumps for the SHA-pinned GitHub Actions. Dependabot alerts and CodeQL
