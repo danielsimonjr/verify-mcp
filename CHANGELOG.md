@@ -6,8 +6,24 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The Claude Code verifier. verify-mcp pins verify `102894a` (verify PR #11), which runs the
+  verifier on Claude Haiku or Claude Sonnet through `claude -p` with the login that Claude Code
+  holds. The provider fields name `claude-code`. `verify_model_check` probes it.
+- `verify_runner` accepts the lanes `haiku` and `sonnet`, `lane_max` (one `--lane-max LANE=N` per
+  lane; a strict object, so an unknown lane or `__proto__` is an input error) and `env`, which
+  verify passes to every driver. The Claude Code lanes need `env: "none"`.
+- A `verify_model_check` error for a verify build without the Claude Code provider says so and
+  names the commit that added it.
+- The README, the `verify` skill and the `/verify` command describe the Claude Code verifier, its
+  lanes, its Windows setup (`VERIHARNESS_CLAUDE_BIN`) and the fact that it always runs without the
+  jail.
+
 ### Fixed
 
+- The text for a verify build without `model-check` named the pinned commit as the commit that
+  added it. It names `756bc2b` (verify PR #2) now; the pin moves and that commit does not.
 - The detached-grandchild test stops the run when the grandchild has started, not after a fixed
   1.5 s timeout. Two Bun cold starts can take longer than 1.5 s on a loaded host; the stop then
   came before the grandchild existed, and the test failed in a full run but passed alone. A
@@ -15,6 +31,9 @@ All notable changes to this project are recorded here. The format follows
 
 ### Changed
 
+- `verify_runner` refuses a cap set twice for one lane (`max_flash` with `lane_max.flash`, or
+  `max_opus` with `lane_max.opus`). verify applies `lane_max` over the other two, so one value was
+  dropped.
 - The README is written for a user of the server. It explains what verify does, gives a quick start
   in Claude Code (a verify checkout, its pi runtime, the plugin, a first task), describes the task
   workspace and each output file, and adds workflows, a defaults table, a Windows section, a

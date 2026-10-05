@@ -49,12 +49,17 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at commit `756bc2b`
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at commit `102894a`
   or later, with its dependencies installed (`bun install`). The Claude Code plugin expects it at
-  `~/Github/verify`.
+  `~/Github/verify`. A checkout from `756bc2b` on runs local models but has no Claude Code
+  provider.
 - verify's agent runtime, pi, installed in that checkout: run `harness/scripts/setup_pi.sh` once.
-  It installs a pinned pi into `harness/vendor/`. `verify_driver` and `verify_runner` need it.
+  It installs a pinned pi into `harness/vendor/`. `verify_driver` and `verify_runner` need it for
+  every provider except `claude-code`.
 - A model for the verifier:
+  - Claude Code: the `claude` program, version 2.1 or later, signed in on the host. verify uses
+    the login that Claude Code holds (a subscription or `ANTHROPIC_API_KEY`). See
+    [Claude Code as the verifier](#claude-code-as-the-verifier); or
   - a local server: Ollama on `http://127.0.0.1:11434`, or llama.cpp's `llama-server` on
     `http://127.0.0.1:8080`; or
   - a hosted provider that pi supports, with its credentials set in the environment. The
@@ -95,6 +100,9 @@ reports progress while it runs, and returns its output.
    { "provider": "ollama", "model": "qwen2.5-coder:7b" }
    ```
 
+   For Claude Haiku through Claude Code, use
+   `{ "provider": "claude-code", "model": "claude-haiku-4-5-20251001" }`.
+
 5. Verify one task workspace (see [Task workspace](#task-workspace)) with `verify_driver`:
 
    ```json
@@ -107,7 +115,7 @@ reports progress while it runs, and returns its output.
    ```
 
    `env: "none"` runs without verify's jail. Use it on Windows and macOS, where the jail is not
-   available. See [Windows](#windows) and [Security](#security).
+   available, and always with `claude-code`. See [Windows](#windows) and [Security](#security).
 
 6. Read the decision with `verify_read_result`:
 
@@ -162,13 +170,15 @@ cell directory also holds `run.json`, and `verify_score` writes `scores.json` an
 2. `verify_model_check`: confirm that the model server is up, the model is present, and the model
    can call tools. verify refuses a model that cannot call tools, because a verifier that cannot
    call tools writes no ledger.
-3. `verify_driver` with `task_dir`, `provider`, `model` and, off Linux, `env: "none"`.
+3. `verify_driver` with `task_dir`, `provider`, `model` and, off Linux or with `claude-code`,
+   `env: "none"`.
 4. `verify_read_result` with `task_dir` and `finish`, then `repair` and `deliverables`.
 
 ### Run a benchmark
 
 The benchmarks are `apex`, `wsb`, `wb`, `sb2` and `jb`. A *cell* is one `bench:pool` pair, for
-example `wb:flash`.
+example `wb:flash`. A pool named after a lane runs on that lane: `flash`, `opus`, `haiku` or
+`sonnet`. For another pool name, set `lane`.
 
 1. `verify_materialize` with `bench`: build the task workspaces from the benchmark archive.
 2. `verify_runner` with `cells` and `run_name`: verify every task in each cell. The runner can
@@ -185,7 +195,7 @@ that the native environments use.
 | Tool | verify command | What it does |
 | --- | --- | --- |
 | `verify_status` | `--help` | Shows the pin, the resolved command, the data and runs directories, and whether `model-check` is available |
-| `verify_model_check` | `model-check` | Probes Ollama or llama.cpp. Needs `provider` and `model` |
+| `verify_model_check` | `model-check` | Probes Ollama, llama.cpp or Claude Code. Needs `provider` and `model` |
 | `verify_driver` | `driver <task_dir>` | Verifies one task. The directory must contain `rollouts/` |
 | `verify_runner` | `runner --cells bench:pool --run-name NAME` | Verifies the tasks of one or more cells under `VERIHARNESS_RUNS/<run>/` |
 | `verify_score` | `score <cell_dir> --json` | Scores a cell. Set `json` to false to get text only |
@@ -205,7 +215,7 @@ The server passes an optional flag only when you set it, so verify keeps its own
 | `env` | `jail` (Linux only) |
 | `skills_mode` | `mounted` |
 | `turn_timeout`, `nudge_timeout`, `task_timeout` | 1800 s, 600 s, 3600 s |
-| `max_flash`, `max_opus` (runner lane caps) | 25, 45 |
+| `lane_max` (runner lane caps) | flash 25, opus 45, haiku 2, sonnet 2. `max_flash` and `max_opus` also set the first two |
 | `skip_inflight` (runner) | 45 minutes |
 | `workers`, `batch` (score) | 6, 1 |
 | `request_timeout` (local models) | 180 s |
@@ -216,6 +226,36 @@ Local providers are `ollama` (default `http://127.0.0.1:11434`) and `llamacpp`, 
 `llama.cpp` and `llama-cpp` (default `http://127.0.0.1:8080`). Both need `model`. `base_url`
 overrides the address. The `provider` field also accepts the hosted providers that verify accepts.
 
+### Claude Code as the verifier
+
+Provider `claude-code` runs each verifier turn as `claude -p` with Claude Haiku or Claude Sonnet.
+It uses the login that Claude Code holds and does not read or print a credential.
+
+- `model` is a full model id: `claude-haiku-4-5-20251001` or `claude-sonnet-5-5`.
+- `env` must be `none`. The jail replaces `$HOME`, so Claude Code finds no login in it.
+- Do not set `base_url`, `context_size`, `temperature`, `max_tokens`, `top_p` or
+  `request_timeout` for `verify_driver` or `verify_runner`, or `thinking` for `verify_driver`.
+  verify refuses them with this provider. `verify_model_check` accepts `request_timeout`.
+- The runner lanes `haiku` and `sonnet` use this provider with those model ids. A cell such as
+  `sb2:haiku` runs on the `haiku` lane. Set `env: "none"` for the run.
+- The lanes start two tasks at a time, because the account's usage limit is shared with every
+  other Claude Code session. `lane_max` raises a lane, for example `{ "haiku": 4 }`. When the
+  account reaches its usage limit, the runner starts no more tasks on that lane.
+
+A runner call for one cell on Haiku:
+
+```json
+{
+  "cells": ["sb2:haiku"],
+  "run_name": "haiku-trial",
+  "env": "none",
+  "lane_max": { "haiku": 4 }
+}
+```
+
+verify's [Claude Code design document](https://github.com/danielsimonjr/verify/blob/main/docs/claude-code.md)
+gives the flags that each turn uses and what they do not isolate.
+
 ### Input checks
 
 `verify_runner` refuses input that verify would act on unsafely:
@@ -223,7 +263,10 @@ overrides the address. The `provider` field also accepts the hosted providers th
 - `run_name` and each pool in `cells` must be one path segment: letters, digits, `.`, `_` and
   `-`, not starting with a dot. verify joins both under `VERIHARNESS_RUNS` and deletes an existing
   task workspace there.
-- `lane` must be `flash` or `opus`.
+- `lane` and each `lane_max` key must be `flash`, `opus`, `haiku` or `sonnet`. Each `lane_max`
+  value must be 1 or more.
+- The `flash` and `opus` caps are set once: with `max_flash` or `max_opus`, or in `lane_max`.
+  verify applies `lane_max` over the other two, so a second value would be dropped.
 - Each `cell_cap` entry must be `key=N`, where `key` is a bench or `default` and `N` is 1 or more.
   verify accepts a cap of 0, and its scheduler then never starts the cell's tasks.
 
@@ -294,7 +337,7 @@ The server looks for the command in this order:
 1. `VERIHARNESS_BIN`. A `.ts`, `.js` or `.mjs` file starts with `bun`. Any other file runs as it
    is.
 2. `node_modules/veriharness/harness/cli.ts`, which `bun install` in this repository puts there.
-   It is pinned to verify commit `756bc2b381b2505f307c850db5922820ce0b2e05`.
+   It is pinned to the verify commit named in `src/pin.ts`.
 
 With the copy in `node_modules`, and no `VERIHARNESS_DATA` or `VERIHARNESS_RUNS` set, the data and
 run directories are `./data` and `./runs` in the server's working directory. That keeps run output
@@ -347,7 +390,11 @@ The HTTP server listens on the loopback address only.
 ## Windows
 
 - verify's default environment, `jail`, uses Linux mount namespaces. On Windows, pass
-  `env: "none"` to `verify_driver`. Without it, the driver refuses to start and says why.
+  `env: "none"` to `verify_driver` and `verify_runner`. Without it, the driver refuses to start
+  and says why.
+- For `claude-code`, Claude Code needs Git for Windows. verify starts `claude` from `PATH`. If
+  `claude` is a `.cmd` shim, set `VERIHARNESS_CLAUDE_BIN` to the path of `claude.exe` in the
+  server's environment. Node cannot start a `.cmd` file without a shell.
 - Run `harness/scripts/setup_pi.sh` from Git Bash. It installs pi with npm, which makes the
   `pi`, `pi.cmd` and `pi.ps1` launchers. verify-mcp starts verify with Bun, and Bun starts pi
   through them.
@@ -361,6 +408,10 @@ The HTTP server listens on the loopback address only.
   machine. Verify only rollouts whose files you are willing to have read and run there. On Linux,
   the default jail hides the rest of `$HOME`, the archived scores and the benchmark answer keys from
   the verifier.
+- **The Claude Code lanes always run without the jail.** A verifier on `haiku` or `sonnet` can read
+  the results of other tasks and the benchmark answer keys. Do not use those scores where
+  answer-key secrecy matters. With `env: "none"`, the runner also runs the pi cells of the same run
+  without the jail.
 - `verify_list_runs` and `verify_read_result` read only inside the runs directory or the task
   directory that you name. They accept fixed artifact names, not paths.
 - `verify_runner` refuses run and pool names that would reach outside the runs directory.

@@ -58,6 +58,12 @@ describe("MCP protocol", () => {
       const destructive = listed.tools.filter((tool) => tool.annotations?.destructiveHint).map((tool) => tool.name);
       expect(destructive.sort()).toEqual(["verify_driver", "verify_materialize", "verify_runner", "verify_score"]);
 
+      // A client builds its call from this schema: lane_max must name each lane and allow no other key.
+      const runner = listed.tools.find((tool) => tool.name === "verify_runner");
+      const laneMax = (runner?.inputSchema.properties as Record<string, Record<string, unknown>> | undefined)?.lane_max;
+      expect(Object.keys((laneMax?.properties as object | undefined) ?? {}).sort()).toEqual(["flash", "haiku", "opus", "sonnet"]);
+      expect(laneMax?.additionalProperties).toBe(false);
+
       const checked = await mcp.callTool({
         name: "verify_model_check",
         arguments: { provider: "ollama", model: "qwen" },

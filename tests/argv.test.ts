@@ -90,6 +90,38 @@ describe("argv", () => {
     ]);
   });
 
+  test("runner passes env and one --lane-max per lane, in lane order", () => {
+    const input: RunnerInput = {
+      cells: ["wb:sonnet"],
+      run_name: "cc",
+      env: "none",
+      lane_max: { sonnet: 3, haiku: 4 },
+    };
+    expect(runnerArgv(input)).toEqual([
+      "runner",
+      "--run-name",
+      "cc",
+      "--cells",
+      "wb:sonnet",
+      "--lane-max",
+      "haiku=4",
+      "--lane-max",
+      "sonnet=3",
+      "--env",
+      "none",
+    ]);
+  });
+
+  test("model-check passes claude-code with its model id", () => {
+    expect(modelCheckArgv({ provider: "claude-code", model: "claude-haiku-4-5-20251001" })).toEqual([
+      "model-check",
+      "--provider",
+      "claude-code",
+      "--model",
+      "claude-haiku-4-5-20251001",
+    ]);
+  });
+
   test("score and env-derive", () => {
     const score: ScoreInput = { cell_dir: "/runs/nightly/wb_flash", json: true };
     expect(scoreArgv(score)).toEqual(["score", "/runs/nightly/wb_flash", "--json"]);

@@ -21848,6 +21848,136 @@ function originValidationResponse(req, allowedOriginHostnames) {
   });
 }
 
+// src/schemas.ts
+var BENCHES = ["apex", "wsb", "wb", "sb2", "jb"];
+var LANES = ["flash", "opus", "haiku", "sonnet"];
+var ENVS = ["jail", "none", "native", "native-full"];
+var SEGMENT = "[A-Za-z0-9][A-Za-z0-9._-]*";
+var SEGMENT_HELP = "letters, digits, dot, underscore and hyphen, not starting with a dot";
+var CELL = new RegExp(`^(?:${BENCHES.join("|")}):${SEGMENT}$`);
+var CAP = `(?:${[...BENCHES, "default"].join("|")})=[1-9][0-9]*`;
+var CELL_CAP = new RegExp(`^${CAP}(?:,${CAP})*$`);
+var laneCap = number2().int().positive();
+var laneCaps = object(Object.fromEntries(LANES.map((lane) => [lane, laneCap.optional()]))).strict();
+var timeoutSeconds = number2().positive().optional().describe("Wall-clock timeout for this call, in seconds. Overrides the tool default.");
+var localModelShape = {
+  provider: string2().min(1).optional().describe("Model provider. Local servers: ollama, or llamacpp (aliases llama.cpp and llama-cpp). Claude Code: " + "claude-code, which uses the login Claude Code holds, needs a full model id and env none."),
+  model: string2().min(1).optional().describe("Model name. Required by verify for ollama and llamacpp. For claude-code, a full model id such as claude-haiku-4-5-20251001."),
+  base_url: string2().min(1).optional().describe("Local server URL. Ollama defaults to http://127.0.0.1:11434, llama.cpp to http://127.0.0.1:8080."),
+  context_size: number2().int().positive().optional().describe("Context length passed as --context-size."),
+  temperature: number2().optional().describe("Sampling temperature passed as --temperature."),
+  max_tokens: number2().int().positive().optional().describe("Max tokens passed as --max-tokens."),
+  top_p: number2().optional().describe("Top-p passed as --top-p."),
+  request_timeout: number2().positive().optional().describe("Per-request timeout in seconds, passed as --request-timeout. Verify's own default is 180.")
+};
+var statusInput = object({ timeout_seconds: timeoutSeconds }).strict();
+var modelCheckInput = object({
+  provider: string2().min(1).describe("Provider to probe: ollama, llamacpp (aliases llama.cpp and llama-cpp), or claude-code. For claude-code the " + "check runs one isolated turn with the login Claude Code holds and reports the CLI version."),
+  model: string2().min(1).describe("Model name to probe. For claude-code, a full model id."),
+  base_url: localModelShape.base_url,
+  context_size: localModelShape.context_size,
+  temperature: localModelShape.temperature,
+  max_tokens: localModelShape.max_tokens,
+  top_p: localModelShape.top_p,
+  request_timeout: localModelShape.request_timeout,
+  timeout_seconds: timeoutSeconds
+}).strict();
+var driverInput = object({
+  task_dir: string2().min(1).describe("Task workspace. Must contain a rollouts/ directory."),
+  contract: _enum(["artifact", "pick-only"]).optional().describe("Driver contract. Omit to keep verify's default (artifact)."),
+  thinking: string2().min(1).optional().describe("Thinking level passed as --thinking."),
+  skill: array(string2().min(1)).optional().describe("Skill names. Each becomes a --skill flag."),
+  no_skills: boolean2().optional().describe("Pass --no-skills when true."),
+  skills_mode: _enum(["mounted", "auto"]).optional().describe("Omit to keep verify's default (mounted)."),
+  env: _enum(ENVS).optional().describe("Execution environment. Omit to keep verify's default (jail). Provider claude-code needs none."),
+  turn_timeout: number2().positive().optional().describe("Seconds, passed as --turn-timeout. Verify's default is 1800."),
+  nudge_timeout: number2().positive().optional().describe("Seconds, passed as --nudge-timeout. Verify's default is 600."),
+  task_timeout: number2().positive().optional().describe("Seconds, passed as --task-timeout. Verify's default is 3600."),
+  timeout_seconds: timeoutSeconds,
+  ...localModelShape
+}).strict();
+var runnerInput = object({
+  cells: array(string2().regex(CELL, `cell must be bench:pool, bench one of ${BENCHES.join(", ")}, pool ${SEGMENT_HELP}`)).min(1).describe("Cells to run. Each entry is bench:pool, for example wb:flash."),
+  run_name: string2().regex(new RegExp(`^${SEGMENT}$`), `run_name must be one path segment: ${SEGMENT_HELP}`).describe("Run directory name under VERIHARNESS_RUNS. One path segment."),
+  contract: _enum(["artifact", "pick-only"]).optional(),
+  lane: _enum(LANES).optional().describe("Verifier lane: flash, opus, haiku or sonnet. Required when a pool is not itself a lane name."),
+  max_flash: number2().int().positive().optional().describe("In-flight cap for the flash lane. Verify's default is 25."),
+  max_opus: number2().int().positive().optional().describe("In-flight cap for the opus lane. Verify's default is 45."),
+  lane_max: laneCaps.optional().describe("In-flight cap per lane, each passed as --lane-max LANE=N. Verify's defaults: flash 25, opus 45, haiku 2, " + "sonnet 2. The Claude Code lanes start low because the subscription's usage limit is shared with the " + "account's other Claude Code sessions."),
+  env: _enum(ENVS).optional().describe("Execution environment, passed to every driver as --env. Omit to keep verify's default (jail). " + "The haiku and sonnet lanes and provider claude-code need none."),
+  cell_cap: string2().regex(CELL_CAP, "cell_cap must be key=N[,key=N] with N a positive integer and key a bench name or default").optional().describe("In-flight cap per bench, passed as --cell-cap: key=N[,key=N], key a bench name or default."),
+  only: array(string2().min(1)).optional().describe("Task keys. Each becomes --only."),
+  only_file: string2().min(1).optional().describe("File of task keys, passed as --only-file."),
+  limit: number2().int().nonnegative().optional(),
+  sample: number2().int().nonnegative().optional(),
+  fraction: number2().nonnegative().optional(),
+  seed: number2().int().nonnegative().optional(),
+  turn_timeout: number2().positive().optional(),
+  task_timeout: number2().positive().optional(),
+  skip_inflight: number2().nonnegative().optional().describe("Minutes, passed as --skip-inflight: a task workspace with activity in the last N minutes is skipped as in flight. Verify's default is 45."),
+  skill: array(string2().min(1)).optional(),
+  no_skills: boolean2().optional(),
+  skills_mode: _enum(["mounted", "auto"]).optional(),
+  driver_arg: array(string2()).optional().describe("Extra driver arguments. Each becomes --driver-arg."),
+  timeout_seconds: timeoutSeconds,
+  ...localModelShape
+}).strict().superRefine((input, ctx) => {
+  for (const [alias, lane] of [["max_flash", "flash"], ["max_opus", "opus"]]) {
+    if (input[alias] !== undefined && input.lane_max?.[lane] !== undefined) {
+      ctx.addIssue({ code: "custom", path: [alias], message: `set the ${lane} cap once: ${alias} or lane_max.${lane}` });
+    }
+  }
+});
+var scoreInput = object({
+  cell_dir: string2().min(1).describe("Cell directory to score (the bench_pool directory)."),
+  workers: number2().int().positive().optional().describe("Passed as --workers. Verify's default is 6."),
+  batch: number2().int().positive().optional().describe("Passed as --batch. Verify's default is 1."),
+  select_only: boolean2().optional().describe("Pass --select-only when true."),
+  redo: boolean2().optional().describe("Pass --redo when true."),
+  json: boolean2().default(true).describe("Pass --json so the summary can be returned as structured content."),
+  timeout_seconds: timeoutSeconds
+}).strict();
+var gradeInput = object({
+  bench: _enum(BENCHES),
+  task_key: string2().min(1),
+  deliverables_dir: string2().min(1),
+  json: boolean2().default(true).describe("Pass --json and parse the grade result."),
+  timeout_seconds: timeoutSeconds
+}).strict();
+var materializeInput = object({
+  bench: _enum(BENCHES),
+  pool: string2().min(1).optional().describe("Pool name, or omit for verify's default of all pools."),
+  only: array(string2().min(1)).optional().describe("Task keys. Each becomes --only."),
+  limit: number2().int().nonnegative().optional(),
+  timeout_seconds: timeoutSeconds
+}).strict();
+var envDeriveInput = object({
+  jobs: number2().int().positive().optional().describe("Parallel docker builds. Verify's default is 8."),
+  only: array(string2().min(1)).optional().describe("Base image names passed after --only."),
+  timeout_seconds: timeoutSeconds
+}).strict();
+var listRunsInput = object({
+  run: string2().min(1).optional().describe("If set, return only this run directory name.")
+}).strict();
+var ARTIFACTS = [
+  "ledger_elim",
+  "ledger_fals",
+  "finish",
+  "repair",
+  "driver_log",
+  "run",
+  "scores",
+  "scores_partial",
+  "deliverables"
+];
+var readResultInput = object({
+  run: string2().min(1).optional().describe("Run name under VERIHARNESS_RUNS. Required unless task_dir is set."),
+  cell: string2().min(1).optional().describe("Cell directory name under the run, usually bench_pool. Required unless task_dir is set."),
+  task_dir: string2().min(1).optional().describe("Driver task workspace. Use this to read ledgers written into the task, instead of run and cell."),
+  artifact: _enum(ARTIFACTS).describe("Fixed artifact name. deliverables lists file names and sizes under out/deliverables and does not return file bytes."),
+  max_bytes: number2().int().positive().max(2000000).optional().describe("Maximum bytes of a text artifact. Default 262144, hard cap 2000000.")
+}).strict();
+
 // src/argv.ts
 function timeoutMs(seconds) {
   return Math.round(seconds * 1000);
@@ -21929,6 +22059,13 @@ function runnerArgv(input) {
     args.push("--max-flash", String(input.max_flash));
   if (input.max_opus !== undefined)
     args.push("--max-opus", String(input.max_opus));
+  for (const lane of LANES) {
+    const cap = input.lane_max?.[lane];
+    if (cap !== undefined)
+      args.push("--lane-max", `${lane}=${cap}`);
+  }
+  if (input.env)
+    args.push("--env", input.env);
   if (input.cell_cap)
     args.push("--cell-cap", input.cell_cap);
   for (const key of input.only ?? [])
@@ -22020,7 +22157,7 @@ function parseHelpCommands(usage) {
 }
 
 // src/pin.ts
-var VERIFY_GIT_REF = "756bc2b381b2505f307c850db5922820ce0b2e05";
+var VERIFY_GIT_REF = "102894aa4831c18e11feb9a86dee8fcf30de4e1d";
 var VERIFY_GIT_SPEC = `github:danielsimonjr/verify#${VERIFY_GIT_REF}`;
 
 // src/resolve.ts
@@ -22506,12 +22643,18 @@ function progressFrom(ctx) {
     }
   };
 }
-var MODEL_CHECK_MISSING = `This verify build does not include model-check. It was added with Ollama and llama.cpp ` + `backends (verify PR #2, commit ${VERIFY_GIT_REF.slice(0, 7)}). The pinned ref includes it; ` + `this VERIHARNESS_BIN is older.`;
+var MODEL_CHECK_MISSING = `This verify build does not include model-check. It was added with the Ollama and llama.cpp ` + `backends (verify PR #2, commit 756bc2b). The pinned ref ${VERIFY_GIT_REF.slice(0, 7)} includes it; ` + `this VERIHARNESS_BIN is older.`;
+var CLAUDE_CODE_MISSING = `This verify build does not include the Claude Code provider. It was added with the Haiku and Sonnet ` + `lanes (verify PR #11, commit 102894a). The pinned ref ${VERIFY_GIT_REF.slice(0, 7)} includes it; ` + `this VERIHARNESS_BIN is older.`;
 function explain(command, result) {
   const combined = `${result.stderr}
 ${result.stdout}`;
   if (command === "model-check" && /unknown command:\s*model-check/.test(combined)) {
     return `${MODEL_CHECK_MISSING}
+
+${result.stderr.trim()}`;
+  }
+  if (/provider 'claude-code' is not a local backend/.test(combined)) {
+    return `${CLAUDE_CODE_MISSING}
 
 ${result.stderr.trim()}`;
   }
@@ -22728,126 +22871,7 @@ ${read.text}${note}`, structured };
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
 var SERVER_VERSION = "0.1.1";
-var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
-
-// src/schemas.ts
-var BENCHES = ["apex", "wsb", "wb", "sb2", "jb"];
-var LANES = ["flash", "opus"];
-var SEGMENT = "[A-Za-z0-9][A-Za-z0-9._-]*";
-var SEGMENT_HELP = "letters, digits, dot, underscore and hyphen, not starting with a dot";
-var CELL = new RegExp(`^(?:${BENCHES.join("|")}):${SEGMENT}$`);
-var CAP = `(?:${[...BENCHES, "default"].join("|")})=[1-9][0-9]*`;
-var CELL_CAP = new RegExp(`^${CAP}(?:,${CAP})*$`);
-var timeoutSeconds = number2().positive().optional().describe("Wall-clock timeout for this call, in seconds. Overrides the tool default.");
-var localModelShape = {
-  provider: string2().min(1).optional().describe("Model provider. Local servers: ollama, or llamacpp (aliases llama.cpp and llama-cpp)."),
-  model: string2().min(1).optional().describe("Model name. Required by verify for ollama and llamacpp."),
-  base_url: string2().min(1).optional().describe("Local server URL. Ollama defaults to http://127.0.0.1:11434, llama.cpp to http://127.0.0.1:8080."),
-  context_size: number2().int().positive().optional().describe("Context length passed as --context-size."),
-  temperature: number2().optional().describe("Sampling temperature passed as --temperature."),
-  max_tokens: number2().int().positive().optional().describe("Max tokens passed as --max-tokens."),
-  top_p: number2().optional().describe("Top-p passed as --top-p."),
-  request_timeout: number2().positive().optional().describe("Per-request timeout in seconds, passed as --request-timeout. Verify's own default is 180.")
-};
-var statusInput = object({ timeout_seconds: timeoutSeconds }).strict();
-var modelCheckInput = object({
-  provider: string2().min(1).describe("Local provider: ollama, or llamacpp (aliases llama.cpp and llama-cpp)."),
-  model: string2().min(1).describe("Model name to probe."),
-  base_url: localModelShape.base_url,
-  context_size: localModelShape.context_size,
-  temperature: localModelShape.temperature,
-  max_tokens: localModelShape.max_tokens,
-  top_p: localModelShape.top_p,
-  request_timeout: localModelShape.request_timeout,
-  timeout_seconds: timeoutSeconds
-}).strict();
-var driverInput = object({
-  task_dir: string2().min(1).describe("Task workspace. Must contain a rollouts/ directory."),
-  contract: _enum(["artifact", "pick-only"]).optional().describe("Driver contract. Omit to keep verify's default (artifact)."),
-  thinking: string2().min(1).optional().describe("Thinking level passed as --thinking."),
-  skill: array(string2().min(1)).optional().describe("Skill names. Each becomes a --skill flag."),
-  no_skills: boolean2().optional().describe("Pass --no-skills when true."),
-  skills_mode: _enum(["mounted", "auto"]).optional().describe("Omit to keep verify's default (mounted)."),
-  env: _enum(["jail", "none", "native", "native-full"]).optional().describe("Execution environment. Omit to keep verify's default (jail)."),
-  turn_timeout: number2().positive().optional().describe("Seconds, passed as --turn-timeout. Verify's default is 1800."),
-  nudge_timeout: number2().positive().optional().describe("Seconds, passed as --nudge-timeout. Verify's default is 600."),
-  task_timeout: number2().positive().optional().describe("Seconds, passed as --task-timeout. Verify's default is 3600."),
-  timeout_seconds: timeoutSeconds,
-  ...localModelShape
-}).strict();
-var runnerInput = object({
-  cells: array(string2().regex(CELL, `cell must be bench:pool, bench one of ${BENCHES.join(", ")}, pool ${SEGMENT_HELP}`)).min(1).describe("Cells to run. Each entry is bench:pool, for example wb:flash."),
-  run_name: string2().regex(new RegExp(`^${SEGMENT}$`), `run_name must be one path segment: ${SEGMENT_HELP}`).describe("Run directory name under VERIHARNESS_RUNS. One path segment."),
-  contract: _enum(["artifact", "pick-only"]).optional(),
-  lane: _enum(LANES).optional().describe("Verifier lane. Required when a pool is not itself a lane name."),
-  max_flash: number2().int().positive().optional().describe("In-flight cap for the flash lane. Verify's default is 25."),
-  max_opus: number2().int().positive().optional().describe("In-flight cap for the opus lane. Verify's default is 45."),
-  cell_cap: string2().regex(CELL_CAP, "cell_cap must be key=N[,key=N] with N a positive integer and key a bench name or default").optional().describe("In-flight cap per bench, passed as --cell-cap: key=N[,key=N], key a bench name or default."),
-  only: array(string2().min(1)).optional().describe("Task keys. Each becomes --only."),
-  only_file: string2().min(1).optional().describe("File of task keys, passed as --only-file."),
-  limit: number2().int().nonnegative().optional(),
-  sample: number2().int().nonnegative().optional(),
-  fraction: number2().nonnegative().optional(),
-  seed: number2().int().nonnegative().optional(),
-  turn_timeout: number2().positive().optional(),
-  task_timeout: number2().positive().optional(),
-  skip_inflight: number2().nonnegative().optional().describe("Minutes, passed as --skip-inflight: a task workspace with activity in the last N minutes is skipped as in flight. Verify's default is 45."),
-  skill: array(string2().min(1)).optional(),
-  no_skills: boolean2().optional(),
-  skills_mode: _enum(["mounted", "auto"]).optional(),
-  driver_arg: array(string2()).optional().describe("Extra driver arguments. Each becomes --driver-arg."),
-  timeout_seconds: timeoutSeconds,
-  ...localModelShape
-}).strict();
-var scoreInput = object({
-  cell_dir: string2().min(1).describe("Cell directory to score (the bench_pool directory)."),
-  workers: number2().int().positive().optional().describe("Passed as --workers. Verify's default is 6."),
-  batch: number2().int().positive().optional().describe("Passed as --batch. Verify's default is 1."),
-  select_only: boolean2().optional().describe("Pass --select-only when true."),
-  redo: boolean2().optional().describe("Pass --redo when true."),
-  json: boolean2().default(true).describe("Pass --json so the summary can be returned as structured content."),
-  timeout_seconds: timeoutSeconds
-}).strict();
-var gradeInput = object({
-  bench: _enum(BENCHES),
-  task_key: string2().min(1),
-  deliverables_dir: string2().min(1),
-  json: boolean2().default(true).describe("Pass --json and parse the grade result."),
-  timeout_seconds: timeoutSeconds
-}).strict();
-var materializeInput = object({
-  bench: _enum(BENCHES),
-  pool: string2().min(1).optional().describe("Pool name, or omit for verify's default of all pools."),
-  only: array(string2().min(1)).optional().describe("Task keys. Each becomes --only."),
-  limit: number2().int().nonnegative().optional(),
-  timeout_seconds: timeoutSeconds
-}).strict();
-var envDeriveInput = object({
-  jobs: number2().int().positive().optional().describe("Parallel docker builds. Verify's default is 8."),
-  only: array(string2().min(1)).optional().describe("Base image names passed after --only."),
-  timeout_seconds: timeoutSeconds
-}).strict();
-var listRunsInput = object({
-  run: string2().min(1).optional().describe("If set, return only this run directory name.")
-}).strict();
-var ARTIFACTS = [
-  "ledger_elim",
-  "ledger_fals",
-  "finish",
-  "repair",
-  "driver_log",
-  "run",
-  "scores",
-  "scores_partial",
-  "deliverables"
-];
-var readResultInput = object({
-  run: string2().min(1).optional().describe("Run name under VERIHARNESS_RUNS. Required unless task_dir is set."),
-  cell: string2().min(1).optional().describe("Cell directory name under the run, usually bench_pool. Required unless task_dir is set."),
-  task_dir: string2().min(1).optional().describe("Driver task workspace. Use this to read ledgers written into the task, instead of run and cell."),
-  artifact: _enum(ARTIFACTS).describe("Fixed artifact name. deliverables lists file names and sizes under out/deliverables and does not return file bytes."),
-  max_bytes: number2().int().positive().max(2000000).optional().describe("Maximum bytes of a text artifact. Default 262144, hard cap 2000000.")
-}).strict();
+var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or the runner lanes haiku and sonnet; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts
 function toCall(outcome) {
@@ -22873,8 +22897,8 @@ function createVerifyServer(deps = defaultDeps()) {
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   }, async (args, ctx) => call(handleStatus(args, deps, progressFrom(ctx))));
   server.registerTool("verify_model_check", {
-    title: "Check a local model server",
-    description: "Probe an Ollama or llama.cpp server with `veriharness model-check`. " + "If this binary predates verify PR #2, the error says model-check is absent. " + "If the server is down, the error says the local model server is down.",
+    title: "Check a model before a run",
+    description: "Probe an Ollama or llama.cpp server, or Claude Code, with `veriharness model-check`. " + "For provider claude-code the check runs one isolated turn and reports the CLI version and model. " + "If this binary predates verify PR #2, the error says model-check is absent; if it predates PR #11, " + "the error says the Claude Code provider is absent. " + "If a local server is down, the error says the local model server is down.",
     inputSchema: modelCheckInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   }, async (args, ctx) => call(handleModelCheck(args, deps, progressFrom(ctx))));

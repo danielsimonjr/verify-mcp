@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { BENCHES as PINNED_BENCHES, LANES as PINNED_LANES } from "veriharness/harness/config.ts";
 
-import { BENCHES, LANES, runnerInput } from "../src/schemas.ts";
+import { BENCHES, LANES, driverInput, modelCheckInput, runnerInput } from "../src/schemas.ts";
 
 const ok = (input: Record<string, unknown>) => runnerInput.safeParse({ cells: ["wb:flash"], run_name: "nightly", ...input });
 
@@ -34,8 +34,39 @@ describe("runner input", () => {
     expect(ok({ cell_cap: "wb=3,default=5" }).success).toBe(true);
   });
 
+  // The pinned runner reads --lane-max LANE=N and throws on an unknown lane or a cap below 1.
+  test("accepts lane caps for known lanes only, as positive integers", () => {
+    expect(ok({ lane_max: { haiku: 4, sonnet: 1 } }).success).toBe(true);
+    for (const lane_max of [{ bogus: 2 }, { haiku: 0 }, { haiku: 1.5 }, { haiku: -1 }, JSON.parse('{"__proto__": 3}'), { constructor: 3 }]) {
+      expect(ok({ lane_max }).success).toBe(false);
+    }
+  });
+
+  // The pinned runner applies --max-flash, then --lane-max over it, so one of two values is dropped.
+  test("refuses a cap set twice for one lane", () => {
+    expect(ok({ max_flash: 3, lane_max: { flash: 5 } }).success).toBe(false);
+    expect(ok({ max_opus: 3, lane_max: { opus: 5 } }).success).toBe(false);
+    expect(ok({ max_flash: 3, lane_max: { haiku: 5 } }).success).toBe(true);
+  });
+
+  test("passes the execution environment the Claude Code lanes need", () => {
+    expect(ok({ cells: ["wb:haiku"], env: "none" }).success).toBe(true);
+    expect(ok({ env: "docker" }).success).toBe(false);
+  });
+
   test("documents skip_inflight in minutes, the unit the runner reads", () => {
     expect(runnerInput.shape.skip_inflight.description).toMatch(/minutes/i);
+  });
+});
+
+describe("provider text", () => {
+  // The pinned verify runs Claude Code as provider claude-code; a caller that reads only the schema
+  // must learn that it exists and that it needs env none.
+  test("every provider field names claude-code", () => {
+    expect(modelCheckInput.shape.provider.description).toMatch(/claude-code/);
+    expect(driverInput.shape.provider.description).toMatch(/claude-code/);
+    expect(runnerInput.shape.provider.description).toMatch(/claude-code/);
+    expect(runnerInput.shape.env.description).toMatch(/none/);
   });
 });
 

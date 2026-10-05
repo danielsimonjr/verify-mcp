@@ -105,14 +105,23 @@ export function progressFrom(ctx: ServerContext): ProgressCtx {
 }
 
 const MODEL_CHECK_MISSING =
-  `This verify build does not include model-check. It was added with Ollama and llama.cpp ` +
-  `backends (verify PR #2, commit ${VERIFY_GIT_REF.slice(0, 7)}). The pinned ref includes it; ` +
+  `This verify build does not include model-check. It was added with the Ollama and llama.cpp ` +
+  `backends (verify PR #2, commit 756bc2b). The pinned ref ${VERIFY_GIT_REF.slice(0, 7)} includes it; ` +
+  `this VERIHARNESS_BIN is older.`;
+
+const CLAUDE_CODE_MISSING =
+  `This verify build does not include the Claude Code provider. It was added with the Haiku and Sonnet ` +
+  `lanes (verify PR #11, commit 102894a). The pinned ref ${VERIFY_GIT_REF.slice(0, 7)} includes it; ` +
   `this VERIHARNESS_BIN is older.`;
 
 function explain(command: string, result: RunResult): string {
   const combined = `${result.stderr}\n${result.stdout}`;
   if (command === "model-check" && /unknown command:\s*model-check/.test(combined)) {
     return `${MODEL_CHECK_MISSING}\n\n${result.stderr.trim()}`;
+  }
+  // Verify before PR #11 rejects every provider but the two local ones with this message.
+  if (/provider 'claude-code' is not a local backend/.test(combined)) {
+    return `${CLAUDE_CODE_MISSING}\n\n${result.stderr.trim()}`;
   }
   if (/Ollama is not reachable|llama-server is not reachable/.test(combined)) {
     const detail = result.stderr.trim() || result.stdout.trim();

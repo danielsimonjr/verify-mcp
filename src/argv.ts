@@ -1,11 +1,12 @@
-import type {
-  DriverInput,
-  EnvDeriveInput,
-  GradeInput,
-  MaterializeInput,
-  ModelCheckInput,
-  RunnerInput,
-  ScoreInput,
+import {
+  LANES,
+  type DriverInput,
+  type EnvDeriveInput,
+  type GradeInput,
+  type MaterializeInput,
+  type ModelCheckInput,
+  type RunnerInput,
+  type ScoreInput,
 } from "./schemas.ts";
 
 /** Local model fields that `appendLocalModel` turns into veriharness flags. */
@@ -107,7 +108,7 @@ export function driverTimeoutSeconds(input: DriverInput): number {
  * Builds `runner --run-name <run_name>` and one `--cells` flag per cell.
  *
  * Each option that `input` sets adds a flag. `only`, `skill` and `driver_arg` add one flag per
- * entry. The local model flags come last.
+ * entry, and `lane_max` one `--lane-max LANE=N` per lane, in LANES order. The local model flags come last.
  */
 export function runnerArgv(input: RunnerInput): string[] {
   const args = ["runner", "--run-name", input.run_name];
@@ -116,6 +117,11 @@ export function runnerArgv(input: RunnerInput): string[] {
   if (input.lane) args.push("--lane", input.lane);
   if (input.max_flash !== undefined) args.push("--max-flash", String(input.max_flash));
   if (input.max_opus !== undefined) args.push("--max-opus", String(input.max_opus));
+  for (const lane of LANES) {
+    const cap = input.lane_max?.[lane];
+    if (cap !== undefined) args.push("--lane-max", `${lane}=${cap}`);
+  }
+  if (input.env) args.push("--env", input.env);
   if (input.cell_cap) args.push("--cell-cap", input.cell_cap);
   for (const key of input.only ?? []) args.push("--only", key);
   if (input.only_file) args.push("--only-file", input.only_file);

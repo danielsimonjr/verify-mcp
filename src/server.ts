@@ -86,11 +86,13 @@ export function createVerifyServer(deps: Deps = defaultDeps()): McpServer {
   server.registerTool(
     "verify_model_check",
     {
-      title: "Check a local model server",
+      title: "Check a model before a run",
       description:
-        "Probe an Ollama or llama.cpp server with `veriharness model-check`. " +
-        "If this binary predates verify PR #2, the error says model-check is absent. " +
-        "If the server is down, the error says the local model server is down.",
+        "Probe an Ollama or llama.cpp server, or Claude Code, with `veriharness model-check`. " +
+        "For provider claude-code the check runs one isolated turn and reports the CLI version and model. " +
+        "If this binary predates verify PR #2, the error says model-check is absent; if it predates PR #11, " +
+        "the error says the Claude Code provider is absent. " +
+        "If a local server is down, the error says the local model server is down.",
       inputSchema: modelCheckInput,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
