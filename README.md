@@ -238,8 +238,8 @@ task directory.
 
 Long tools send `notifications/progress`, at least every 15 seconds. At the timeout, or when the
 client cancels, the server stops the verify command and every process under it, including the
-detached processes that the driver starts for each agent turn. The result keeps the last 64 KiB of
-stdout and stderr.
+detached processes that the driver starts for each agent turn. The result keeps the last 65536
+characters of stdout and of stderr.
 
 | Tool | Default timeout |
 | --- | --- |
