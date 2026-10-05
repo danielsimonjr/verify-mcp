@@ -6,7 +6,7 @@ Open work for this repository. Check an item off when it lands, in the same comm
 
 - [x] Provider `claude-code` and lanes `haiku` and `sonnet`, after verify releases its Claude Code runtime: add the lanes to `LANES` (the drift test compares them with the pin), a `lane_max` option for `--lane-max`, `claude-code` in the `provider` descriptions, and `verify_model_check` for `claude-code`. Done in #2.
 - [x] Bump the verify pin to that release and re-run the suite. Done in #2: the pin is `0a7bbf3` (verify #16); 45 pass, 1 skip (POSIX only), 0 fail on Windows.
-- [ ] Measure the environment that Claude Code gives a plugin's stdio server. If it is reduced, the Claude Code login and the session markers can differ in the verifier child. Prove it from the server, not from the configuration.
+- [x] Measure the environment that Claude Code gives a plugin's stdio server. If it is reduced, the Claude Code login and the session markers can differ in the verifier child. Prove it from the server, not from the configuration. Done 2026-10-05, proven by outcome through a server that Claude Code started: `verify_model_check` (claude-code, Haiku) replied OK with `keySource` none, so the verifier child found the Claude Code login; `verify_driver` (Haiku, `env: "none"`) exited 0 in 149 s with base r1 and a valid repair, and left no claude.exe running. The variable list itself was not dumped.
 
 ## Quality gates
 
