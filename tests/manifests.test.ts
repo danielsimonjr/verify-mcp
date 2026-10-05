@@ -90,8 +90,9 @@ describe("manifests", () => {
   });
 
   test("the package pin and protocol revision match the source of truth", () => {
-    const pkg = readJson("package.json") as { dependencies: { veriharness: string; "@modelcontextprotocol/server": string } };
-    expect(pkg.dependencies.veriharness).toContain(VERIFY_GIT_REF);
+    const pkg = readJson("package.json") as { dependencies: Record<string, string> };
+    expect(pkg.dependencies.verify).toContain(VERIFY_GIT_REF);
+    expect(pkg.dependencies).not.toHaveProperty("veriharness");
     expect(pkg.dependencies["@modelcontextprotocol/server"]).toBe("2.3.0");
     expect(PROTOCOL_VERSION).toBe("2026-07-28");
     const pin = readFileSync(join(ROOT, "src", "pin.ts"), "utf8");

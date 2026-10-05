@@ -336,7 +336,7 @@ The server looks for the command in this order:
 
 1. `VERIHARNESS_BIN`. A `.ts`, `.js` or `.mjs` file starts with `bun`. Any other file runs as it
    is.
-2. `node_modules/veriharness/harness/cli.ts`, which `bun install` in this repository puts there.
+2. `node_modules/verify/harness/cli.ts`, which `bun install` in this repository puts there.
    It is pinned to the verify commit named in `src/pin.ts`.
 
 With the copy in `node_modules`, and no `VERIHARNESS_DATA` or `VERIHARNESS_RUNS` set, the data and

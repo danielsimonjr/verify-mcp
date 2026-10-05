@@ -22157,7 +22157,7 @@ function parseHelpCommands(usage) {
 }
 
 // src/pin.ts
-var VERIFY_GIT_REF = "0a7bbf3713dc92b27866019299f30f01fb51f468";
+var VERIFY_GIT_REF = "c10100be7cfb71339f2caa743d7a488909c4f8c5";
 var VERIFY_GIT_SPEC = `github:danielsimonjr/verify#${VERIFY_GIT_REF}`;
 
 // src/resolve.ts
@@ -22169,7 +22169,7 @@ var require2 = createRequire(import.meta.url);
 
 class VerifyNotInstalledError extends Error {
   constructor(detail) {
-    super(`verify is not installed. ${detail} verify-mcp pins veriharness to ${VERIFY_GIT_SPEC} ` + `(commit ${VERIFY_GIT_REF}). Run \`bun install\` in the verify-mcp directory, or set ` + `VERIHARNESS_BIN to the veriharness executable or to harness/cli.ts.`);
+    super(`verify is not installed. ${detail} verify-mcp pins verify to ${VERIFY_GIT_SPEC} ` + `(commit ${VERIFY_GIT_REF}). Run \`bun install\` in the verify-mcp directory, or set ` + `VERIHARNESS_BIN to the veriharness executable or to harness/cli.ts.`);
     this.name = "VerifyNotInstalledError";
   }
 }
@@ -22209,7 +22209,7 @@ function resolveBun(env = process.env) {
 }
 function isPackagedRoot(verifyRoot) {
   const parts = resolve(verifyRoot).split(sep);
-  return parts.includes("node_modules") && parts[parts.length - 1] === "veriharness";
+  return parts.includes("node_modules") && parts[parts.length - 1] === "verify";
 }
 function harnessLocations(verifyRoot, env, cwd) {
   const child = envRecord(env);
@@ -22258,9 +22258,9 @@ function resolveVerifyLaunch(env = process.env, cwd = process.cwd()) {
   } else {
     let pkgJson;
     try {
-      pkgJson = require2.resolve("veriharness/package.json");
+      pkgJson = require2.resolve("verify/package.json");
     } catch {
-      throw new VerifyNotInstalledError("The veriharness package is not installed.");
+      throw new VerifyNotInstalledError("The verify package is not installed.");
     }
     verifyRoot = dirname(pkgJson);
     binPath = join(verifyRoot, "harness", "cli.ts");

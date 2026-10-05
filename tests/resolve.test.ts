@@ -12,7 +12,7 @@ describe("resolveVerifyLaunch", () => {
     expect(launch.source).toBe("package");
     expect(launch.command).toContain("bun");
     // Segments, not a "/" pattern: a Windows path separates with "\".
-    expect(launch.args[0]!.split(sep).slice(-4)).toEqual(["node_modules", "veriharness", "harness", "cli.ts"]);
+    expect(launch.args[0]!.split(sep).slice(-4)).toEqual(["node_modules", "verify", "harness", "cli.ts"]);
     expect(launch.dataDir).toBe(join(process.cwd(), "data"));
     expect(launch.runsDir).toBe(join(process.cwd(), "runs"));
     expect(launch.env.VERIHARNESS_DATA).toBe(launch.dataDir);

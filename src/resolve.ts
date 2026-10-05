@@ -16,7 +16,7 @@ const require = createRequire(import.meta.url);
 export class VerifyNotInstalledError extends Error {
   constructor(detail: string) {
     super(
-      `verify is not installed. ${detail} verify-mcp pins veriharness to ${VERIFY_GIT_SPEC} ` +
+      `verify is not installed. ${detail} verify-mcp pins verify to ${VERIFY_GIT_SPEC} ` +
         `(commit ${VERIFY_GIT_REF}). Run \`bun install\` in the verify-mcp directory, or set ` +
         `VERIHARNESS_BIN to the veriharness executable or to harness/cli.ts.`,
     );
@@ -81,14 +81,14 @@ export function resolveBun(env: NodeJS.ProcessEnv = process.env): string {
 
 function isPackagedRoot(verifyRoot: string): boolean {
   const parts = resolve(verifyRoot).split(sep);
-  return parts.includes("node_modules") && parts[parts.length - 1] === "veriharness";
+  return parts.includes("node_modules") && parts[parts.length - 1] === "verify";
 }
 
 /**
  * Resolves the data and runs folders and the child env.
  *
  * A non-empty `VERIHARNESS_DATA` or `VERIHARNESS_RUNS` sets its folder. Otherwise a packaged install
- * (node_modules/veriharness) uses `cwd`/data and `cwd`/runs, and a checkout uses `verifyRoot`/data
+ * (node_modules/verify) uses `cwd`/data and `cwd`/runs, and a checkout uses `verifyRoot`/data
  * and `verifyRoot`/runs. The child env gets the resolved path when the variable was set or the
  * install is packaged.
  */
@@ -127,7 +127,7 @@ function rootFromBin(binPath: string): string {
 }
 
 /**
- * Builds the VerifyLaunch from `VERIHARNESS_BIN` or from the installed veriharness package.
+ * Builds the VerifyLaunch from `VERIHARNESS_BIN` or from the installed verify package.
  *
  * A non-empty `VERIHARNESS_BIN` comes first: a TypeScript or JavaScript file runs under Bun, and any
  * other file runs directly. Otherwise Bun runs harness/cli.ts from the package. Throws
@@ -159,9 +159,9 @@ export function resolveVerifyLaunch(env: NodeJS.ProcessEnv = process.env, cwd = 
   } else {
     let pkgJson: string;
     try {
-      pkgJson = require.resolve("veriharness/package.json");
+      pkgJson = require.resolve("verify/package.json");
     } catch {
-      throw new VerifyNotInstalledError("The veriharness package is not installed.");
+      throw new VerifyNotInstalledError("The verify package is not installed.");
     }
     verifyRoot = dirname(pkgJson);
     binPath = join(verifyRoot, "harness", "cli.ts");

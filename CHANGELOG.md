@@ -6,6 +6,15 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- verify-mcp pins verify `c10100b` (verify PR #19). The dependency is named `verify`, the package's
+  new name, and the server looks for `node_modules/verify`. The command and the `VERIHARNESS_`
+  variables keep their names.
+- The new pin also includes verify PR #17 and PR #18. In a grader, the stdout cap now kills the whole
+  process tree and runs the cleanup hook, as the timeout does. The live Claude Code test now checks
+  that the verifier picks the right answer.
+
 ## [0.2.0] - 2026-10-05
 
 ### Added
