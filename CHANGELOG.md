@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-05
+
 ### Changed
 
 - verify-mcp pins verify `c10100b` (verify PR #19). The dependency is named `verify`, the package's
