@@ -37,15 +37,18 @@ import type {
   StatusInput,
 } from "./schemas.ts";
 
+/** Spawns one process and returns its result. `defaultDeps` uses `runProcess`. */
 export interface CommandRunner {
   run(req: RunRequest): Promise<RunResult>;
 }
 
+/** The process runner and the launch resolver that the handlers use. */
 export interface Deps {
   runner: CommandRunner;
   resolveLaunch: () => VerifyLaunch;
 }
 
+/** Returns deps that spawn with `runProcess` and resolve each launch with `resolveVerifyLaunch`. */
 export function defaultDeps(): Deps {
   return {
     runner: { run: runProcess },
@@ -53,17 +56,26 @@ export function defaultDeps(): Deps {
   };
 }
 
+/** The text, error flag and structured content that a handler returns for one tool call. */
 export interface ToolOutcome {
   text: string;
   isError?: boolean;
   structured?: Record<string, unknown>;
 }
 
+/** The abort signal of one tool call and a function that sends progress notifications. */
 export interface ProgressCtx {
   signal?: AbortSignal;
   notify: (message: string, force?: boolean) => Promise<void>;
 }
 
+/**
+ * Builds a ProgressCtx from the request context.
+ *
+ * `notify` sends nothing when the request has no progress token. `notify` drops a message within
+ * 400 ms of the last one, unless `force` is true or nothing went out yet. `notify` cuts each
+ * message to 240 characters and ignores a send failure.
+ */
 export function progressFrom(ctx: ServerContext): ProgressCtx {
   const token = ctx.mcpReq._meta?.progressToken;
   let progress = 0;
@@ -191,6 +203,12 @@ async function withLaunch(deps: Deps, fn: (launch: VerifyLaunch) => Promise<Tool
   }
 }
 
+/**
+ * Runs `veriharness --help` and reports the launch and the command list.
+ *
+ * The report holds the pin, the launch command, and the data and runs folders. `modelCheck` is
+ * true when the list holds `model-check`. A failed run returns an error outcome.
+ */
 export function handleStatus(input: StatusInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     const result = await invoke(deps, launch, "status", statusArgv(), statusTimeoutSeconds(input), progress);
@@ -222,6 +240,12 @@ export function handleStatus(input: StatusInput, deps: Deps, progress?: Progress
   });
 }
 
+/**
+ * Runs `veriharness model-check`. JSON in stdout goes into the structured content.
+ *
+ * A failed run returns an error outcome. The error text explains a verify build that lacks
+ * model-check.
+ */
 export function handleModelCheck(input: ModelCheckInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     const result = await invoke(
@@ -236,6 +260,7 @@ export function handleModelCheck(input: ModelCheckInput, deps: Deps, progress?: 
   });
 }
 
+/** Runs `veriharness driver`. A non-zero exit, a timeout or a cancel returns an error outcome. */
 export function handleDriver(input: DriverInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     const result = await invoke(deps, launch, "driver", driverArgv(input), driverTimeoutSeconds(input), progress);
@@ -243,6 +268,7 @@ export function handleDriver(input: DriverInput, deps: Deps, progress?: Progress
   });
 }
 
+/** Runs `veriharness runner`. A non-zero exit, a timeout or a cancel returns an error outcome. */
 export function handleRunner(input: RunnerInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     const result = await invoke(deps, launch, "runner", runnerArgv(input), runnerTimeoutSeconds(input), progress);
@@ -250,6 +276,7 @@ export function handleRunner(input: RunnerInput, deps: Deps, progress?: Progress
   });
 }
 
+/** Runs `veriharness score`. When `json` is true, JSON in stdout goes into the structured content. */
 export function handleScore(input: ScoreInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     const result = await invoke(deps, launch, "score", scoreArgv(input), scoreTimeoutSeconds(input), progress);
@@ -257,6 +284,7 @@ export function handleScore(input: ScoreInput, deps: Deps, progress?: ProgressCt
   });
 }
 
+/** Runs `veriharness grade`. When `json` is true, JSON in stdout goes into the structured content. */
 export function handleGrade(input: GradeInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     const result = await invoke(deps, launch, "grade", gradeArgv(input), gradeTimeoutSeconds(input), progress);
@@ -264,6 +292,7 @@ export function handleGrade(input: GradeInput, deps: Deps, progress?: ProgressCt
   });
 }
 
+/** Runs `veriharness materialize`. A non-zero exit, a timeout or a cancel returns an error outcome. */
 export function handleMaterialize(input: MaterializeInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     const result = await invoke(
@@ -278,6 +307,7 @@ export function handleMaterialize(input: MaterializeInput, deps: Deps, progress?
   });
 }
 
+/** Runs `veriharness env-derive`. A non-zero exit, a timeout or a cancel returns an error outcome. */
 export function handleEnvDerive(input: EnvDeriveInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     const result = await invoke(
@@ -292,6 +322,12 @@ export function handleEnvDerive(input: EnvDeriveInput, deps: Deps, progress?: Pr
   });
 }
 
+/**
+ * Lists each run folder under the runs directory with its cell folders.
+ *
+ * `run` keeps only that run. A missing runs directory returns an empty list, not an error. A `run`
+ * that is not one path segment returns an error outcome.
+ */
 export function handleListRuns(input: ListRunsInput, deps: Deps): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     try {
@@ -314,6 +350,12 @@ export function handleListRuns(input: ListRunsInput, deps: Deps): Promise<ToolOu
   });
 }
 
+/**
+ * Reads one named artifact from `run`/`cell` under the runs directory, or from `task_dir`.
+ *
+ * A text artifact stops at `max_bytes`, default 262144. A bad or escaping path returns an error
+ * outcome.
+ */
 export function handleReadResult(input: ReadResultInput, deps: Deps): Promise<ToolOutcome> {
   return withLaunch(deps, async (launch) => {
     try {

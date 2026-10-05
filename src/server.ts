@@ -55,10 +55,11 @@ function call(outcome: Promise<ToolOutcome>): Promise<CallToolResult> {
 }
 
 /**
- * Capabilities are tools only. Logging, roots, and sampling are omitted:
- * the 2026-07-28 revision deprecates server logging and replaces the
- * server-to-client roots/sampling requests with input_required, which this
- * server does not need. HTTP+SSE is not served.
+ * Creates the verify MCP server with its ten tools.
+ *
+ * The server declares the tools capability only. The 2026-07-28 revision deprecates server logging.
+ * The revision also replaces the server-to-client roots and sampling requests with input_required,
+ * which this server does not need. HTTP+SSE is not served.
  */
 export function createVerifyServer(deps: Deps = defaultDeps()): McpServer {
   const server = new McpServer(

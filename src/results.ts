@@ -20,12 +20,19 @@ const JSON_ARTIFACTS = new Set<ArtifactName>(["ledger_elim", "ledger_fals", "fin
 export const DEFAULT_MAX_BYTES = 262_144;
 export const MAX_DELIVERABLE_ENTRIES = 500;
 
+/** The runs directory, a flag for a missing directory, and the cell folder names of each run. */
 export interface RunListing {
   runsDir: string;
   missing: boolean;
   runs: Array<{ name: string; cells: string[] }>;
 }
 
+/**
+ * One artifact read: the real path, the text, and the truncation flag.
+ *
+ * `json` holds the parse of a complete JSON artifact. `deliverables` holds the file list of the
+ * deliverables folder.
+ */
 export interface ReadResult {
   path: string;
   artifact: ArtifactName;
@@ -35,6 +42,7 @@ export interface ReadResult {
   deliverables?: Array<{ name: string; bytes: number }>;
 }
 
+/** Error for a bad result request: an invalid name, a missing or escaping path, or a wrong mix of options. */
 export class ResultPathError extends Error {
   constructor(message: string) {
     super(message);
@@ -58,6 +66,12 @@ function jail(root: string, target: string): string {
   return targetReal;
 }
 
+/**
+ * Lists the run folders under `runsDir` and the cell folders in each, sorted, without dot folders.
+ *
+ * `run` keeps only that run. A missing `runsDir` returns `missing: true`. An unreadable run folder
+ * lists no cells. Throws ResultPathError when `run` is not one path segment.
+ */
 export function listRuns(runsDir: string, run?: string): RunListing {
   if (run) assertSegment("run", run);
   if (!existsSync(runsDir)) return { runsDir, missing: true, runs: [] };
@@ -101,9 +115,10 @@ function listDeliverables(dir: string): Array<{ name: string; bytes: number }> {
 }
 
 /**
- * The first `maxBytes` of a file, and whether more follows. Reads at most `maxBytes + 1` bytes:
- * a driver.log can run to gigabytes, and loading it whole to return a small slice blocks the
- * server and can exhaust its memory.
+ * Returns the first `maxBytes` of a file, and whether more follows.
+ *
+ * The read stops at `maxBytes + 1` bytes. A driver.log can grow to gigabytes. Loading it whole to
+ * return a small slice blocks the server and can exhaust its memory.
  */
 export function readPrefix(path: string, maxBytes: number): { bytes: Uint8Array; truncated: boolean } {
   const buf = new Uint8Array(maxBytes + 1);
@@ -121,6 +136,14 @@ export function readPrefix(path: string, maxBytes: number): { bytes: Uint8Array;
   }
 }
 
+/**
+ * Reads `artifact` under `baseDir`.
+ *
+ * The folder and the file must both resolve, after symlinks, inside `jailRoot`. A text artifact
+ * returns its first `maxBytes`, and a complete JSON artifact also returns its parse.
+ * `deliverables` lists up to 500 files with their sizes and skips symlinks. Throws ResultPathError
+ * when a path is missing or escapes `jailRoot`, or `deliverables` is not a folder.
+ */
 export function readArtifact(baseDir: string, jailRoot: string, artifact: ArtifactName, maxBytes: number): ReadResult {
   if (!existsSync(baseDir)) throw new ResultPathError(`directory does not exist: ${baseDir}`);
   const baseReal = jail(jailRoot, baseDir);
@@ -153,6 +176,13 @@ export function readArtifact(baseDir: string, jailRoot: string, artifact: Artifa
   return { path: real, artifact, truncated, text, json };
 }
 
+/**
+ * Picks the folder to read and the jail root.
+ *
+ * `taskDir` gives both, and excludes `run` and `cell`. Without `taskDir`, `run` and `cell` name a
+ * folder under `runsDir`, the jail root. Throws ResultPathError when the options break those rules
+ * or a name is not one path segment. Also throws when `taskDir` or `runsDir` is missing.
+ */
 export function resultBase(options: {
   runsDir: string;
   run?: string;

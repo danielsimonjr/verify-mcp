@@ -45,6 +45,7 @@ export const localModelShape = {
 };
 
 export const statusInput = z.object({ timeout_seconds: timeoutSeconds }).strict();
+/** Arguments of the verify_status tool, as `statusInput` parses them. */
 export type StatusInput = z.infer<typeof statusInput>;
 
 export const modelCheckInput = z
@@ -63,6 +64,7 @@ export const modelCheckInput = z
     timeout_seconds: timeoutSeconds,
   })
   .strict();
+/** Arguments of the verify_model_check tool, as `modelCheckInput` parses them. */
 export type ModelCheckInput = z.infer<typeof modelCheckInput>;
 
 export const driverInput = z
@@ -84,6 +86,7 @@ export const driverInput = z
     ...localModelShape,
   })
   .strict();
+/** Arguments of the verify_driver tool, as `driverInput` parses them. */
 export type DriverInput = z.infer<typeof driverInput>;
 
 export const runnerInput = z
@@ -128,6 +131,7 @@ export const runnerInput = z
     ...localModelShape,
   })
   .strict();
+/** Arguments of the verify_runner tool, as `runnerInput` parses them. */
 export type RunnerInput = z.infer<typeof runnerInput>;
 
 export const scoreInput = z
@@ -141,6 +145,7 @@ export const scoreInput = z
     timeout_seconds: timeoutSeconds,
   })
   .strict();
+/** Arguments of the verify_score tool, as `scoreInput` parses them. `json` defaults to true. */
 export type ScoreInput = z.infer<typeof scoreInput>;
 
 export const gradeInput = z
@@ -152,6 +157,7 @@ export const gradeInput = z
     timeout_seconds: timeoutSeconds,
   })
   .strict();
+/** Arguments of the verify_grade tool, as `gradeInput` parses them. `json` defaults to true. */
 export type GradeInput = z.infer<typeof gradeInput>;
 
 export const materializeInput = z
@@ -163,6 +169,7 @@ export const materializeInput = z
     timeout_seconds: timeoutSeconds,
   })
   .strict();
+/** Arguments of the verify_materialize tool, as `materializeInput` parses them. */
 export type MaterializeInput = z.infer<typeof materializeInput>;
 
 export const envDeriveInput = z
@@ -172,6 +179,7 @@ export const envDeriveInput = z
     timeout_seconds: timeoutSeconds,
   })
   .strict();
+/** Arguments of the verify_env_derive tool, as `envDeriveInput` parses them. */
 export type EnvDeriveInput = z.infer<typeof envDeriveInput>;
 
 export const listRunsInput = z
@@ -179,6 +187,7 @@ export const listRunsInput = z
     run: z.string().min(1).optional().describe("If set, return only this run directory name."),
   })
   .strict();
+/** Arguments of the verify_list_runs tool, as `listRunsInput` parses them. */
 export type ListRunsInput = z.infer<typeof listRunsInput>;
 
 export const ARTIFACTS = [
@@ -192,6 +201,7 @@ export const ARTIFACTS = [
   "scores_partial",
   "deliverables",
 ] as const;
+/** An artifact name from ARTIFACTS. results.ts maps each name to one fixed file or folder. */
 export type ArtifactName = (typeof ARTIFACTS)[number];
 
 export const readResultInput = z
@@ -219,4 +229,5 @@ export const readResultInput = z
       .describe("Maximum bytes of a text artifact. Default 262144, hard cap 2000000."),
   })
   .strict();
+/** Arguments of the verify_read_result tool, as `readResultInput` parses them. */
 export type ReadResultInput = z.infer<typeof readResultInput>;

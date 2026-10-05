@@ -10,7 +10,7 @@ Open work for this repository. Check an item off when it lands, in the same comm
 
 ## Quality gates
 
-- [ ] Doc comments: `repo-tools docs check src` reports 63 exported symbols without a doc comment (argv.ts 19, handlers.ts 16, schemas.ts 11, resolve.ts 7, results.ts 6, run.ts 3, http.ts 1).
+- [x] Doc comments: `repo-tools docs check src` reported 63 exported symbols without a doc comment (argv.ts 19, handlers.ts 16, schemas.ts 11, resolve.ts 7, results.ts 6, run.ts 3, http.ts 1). It now passes with no MUST or SHOULD issue.
 
 ## Hosts
 

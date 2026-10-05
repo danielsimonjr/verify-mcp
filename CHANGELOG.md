@@ -14,6 +14,8 @@ All notable changes to this project are recorded here. The format follows
   security section and a source map. It now states that the driver needs pi
   (`harness/scripts/setup_pi.sh`), that `env: "none"` is required off Linux, and that an MCP host
   can start the server with a reduced environment.
+- Every exported symbol in `src/` has a doc comment: `repo-tools docs check src` passes with no MUST
+  or SHOULD issue. It reported 63 symbols with no comment.
 - CI runs the tests on `windows-latest` as well as `ubuntu-latest`. The Windows process-tree
   kill and the Windows path handling had no CI coverage.
 - Dependabot proposes weekly bumps for the SHA-pinned GitHub Actions. Dependabot alerts and CodeQL

@@ -1,6 +1,11 @@
 const CAPTURE_LIMIT = 1024 * 1024;
 const RETURN_LIMIT = 64 * 1024;
 
+/**
+ * One process to spawn, with its timeout in milliseconds and an optional abort signal.
+ *
+ * `onLine` gets each non-blank line of stdout and stderr.
+ */
 export interface RunRequest {
   command: string;
   args: string[];
@@ -11,6 +16,11 @@ export interface RunRequest {
   onLine?: (line: string) => void;
 }
 
+/**
+ * The exit code, the output tails, the timeout and abort flags, and the run time in milliseconds.
+ *
+ * `stdout` and `stderr` each hold the last 65536 characters of their stream.
+ */
 export interface RunResult {
   code: number | null;
   stdout: string;
@@ -77,10 +87,10 @@ async function pump(
 /**
  * Every descendant of `root`, from one `ps` snapshot. POSIX only.
  *
- * A group signal is not enough: the pinned driver runs each agent turn as a detached child, which
- * leads its own process group, so `kill(-pid)` never reaches it and the turn runs on after a
- * timeout. Take the snapshot before the first signal, while the parent links still exist; a child
- * whose parent has died is re-parented and can no longer be found from the root.
+ * A group signal is not enough. The pinned driver runs each agent turn as a detached child that
+ * leads its own process group. `kill(-pid)` never reaches that child, so the turn runs on after a
+ * timeout. Take the snapshot before the first signal, while the parent links still exist. A child
+ * whose parent has died is re-parented and cannot be found from the root.
  */
 function descendants(root: number): number[] {
   const ps = Bun.spawnSync(["ps", "-A", "-o", "pid=,ppid="], { stdout: "pipe", stderr: "ignore" });
@@ -118,15 +128,23 @@ function signalTree(pid: number, tree: number[], signal: NodeJS.Signals): void {
 }
 
 /**
- * Windows has no process groups: `process.kill(-pid)` throws and `process.kill(pid)` ends the
+ * Stops `pid` and every process under it with `taskkill /T /F`.
+ *
+ * Windows has no process groups: `process.kill(-pid)` throws, and `process.kill(pid)` ends the
  * direct child only. A detached grandchild has left the parent's job object, so it survives that.
- * `taskkill /T` walks the parent links instead, and /F is needed because a console process
- * ignores the close request a plain taskkill sends.
+ * `taskkill /T` walks the parent links instead. /F is necessary because a console process ignores
+ * the close request that a plain taskkill sends.
  */
 function killTreeWindows(pid: number): void {
   Bun.spawnSync(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
 }
 
+/**
+ * Spawns `req.command` detached and waits for the exit and the end of both streams.
+ *
+ * A timeout or an abort stops the whole process tree. Windows uses `taskkill /T /F`. POSIX sends
+ * SIGTERM to each process and its group, then SIGKILL after 2 seconds.
+ */
 export async function runProcess(req: RunRequest): Promise<RunResult> {
   const started = Date.now();
   let timedOut = false;

@@ -7,6 +7,12 @@ import { VERIFY_GIT_REF, VERIFY_GIT_SPEC } from "./pin.ts";
 
 const require = createRequire(import.meta.url);
 
+/**
+ * Error for a missing Bun or veriharness CLI.
+ *
+ * The message adds the pinned spec and commit, and tells the user to run `bun install` or set
+ * VERIHARNESS_BIN.
+ */
 export class VerifyNotInstalledError extends Error {
   constructor(detail: string) {
     super(
@@ -18,6 +24,7 @@ export class VerifyNotInstalledError extends Error {
   }
 }
 
+/** How to spawn veriharness: command, arguments, cwd and env, the source of the CLI, and the resolved paths. */
 export interface VerifyLaunch {
   command: string;
   args: string[];
@@ -30,6 +37,7 @@ export interface VerifyLaunch {
   runsDir: string;
 }
 
+/** Copies `base` into a plain record and drops each variable that has no string value. */
 export function envRecord(base: NodeJS.ProcessEnv = process.env): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(base)) {
@@ -38,6 +46,7 @@ export function envRecord(base: NodeJS.ProcessEnv = process.env): Record<string,
   return out;
 }
 
+/** Expands `~` and a leading `~/` to the home folder. Returns other paths unchanged. */
 export function expandHome(path: string): string {
   if (path === "~") return homedir();
   if (path.startsWith("~/")) return join(homedir(), path.slice(2));
@@ -48,6 +57,13 @@ function looksLikeBun(path: string): boolean {
   return (path.split(sep).pop() ?? "").includes("bun");
 }
 
+/**
+ * Finds the Bun executable.
+ *
+ * The order is `BUN_BIN`, then `bun` on PATH, then the current process when its file name holds
+ * "bun". Throws VerifyNotInstalledError when `BUN_BIN` names a missing file, or when the search
+ * finds no Bun.
+ */
 export function resolveBun(env: NodeJS.ProcessEnv = process.env): string {
   const fromEnv = env.BUN_BIN;
   if (typeof fromEnv === "string" && fromEnv.length > 0) {
@@ -68,6 +84,14 @@ function isPackagedRoot(verifyRoot: string): boolean {
   return parts.includes("node_modules") && parts[parts.length - 1] === "veriharness";
 }
 
+/**
+ * Resolves the data and runs folders and the child env.
+ *
+ * A non-empty `VERIHARNESS_DATA` or `VERIHARNESS_RUNS` sets its folder. Otherwise a packaged install
+ * (node_modules/veriharness) uses `cwd`/data and `cwd`/runs, and a checkout uses `verifyRoot`/data
+ * and `verifyRoot`/runs. The child env gets the resolved path when the variable was set or the
+ * install is packaged.
+ */
 export function harnessLocations(
   verifyRoot: string,
   env: NodeJS.ProcessEnv,
@@ -102,6 +126,13 @@ function rootFromBin(binPath: string): string {
   return dirname(normalized);
 }
 
+/**
+ * Builds the VerifyLaunch from `VERIHARNESS_BIN` or from the installed veriharness package.
+ *
+ * A non-empty `VERIHARNESS_BIN` comes first: a TypeScript or JavaScript file runs under Bun, and any
+ * other file runs directly. Otherwise Bun runs harness/cli.ts from the package. Throws
+ * VerifyNotInstalledError when Bun, the configured file, the package or its CLI is missing.
+ */
 export function resolveVerifyLaunch(env: NodeJS.ProcessEnv = process.env, cwd = process.cwd()): VerifyLaunch {
   const bun = resolveBun(env);
   const configured = env.VERIHARNESS_BIN;
