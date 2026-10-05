@@ -49,10 +49,10 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at commit `102894a`
-  or later, with its dependencies installed (`bun install`). The Claude Code plugin expects it at
-  `~/Github/verify`. A checkout from `756bc2b` on runs local models but has no Claude Code
-  provider.
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at commit `0a7bbf3`
+  (the pinned commit) or later, with its dependencies installed (`bun install`). The Claude Code
+  plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
+  checkout from `756bc2b` up to that commit runs local models only.
 - verify's agent runtime, pi, installed in that checkout: run `harness/scripts/setup_pi.sh` once.
   It installs a pinned pi into `harness/vendor/`. `verify_driver` and `verify_runner` need it for
   every provider except `claude-code`.

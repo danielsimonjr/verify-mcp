@@ -8,9 +8,9 @@ All notable changes to this project are recorded here. The format follows
 
 ### Added
 
-- The Claude Code verifier. verify-mcp pins verify `102894a` (verify PR #11), which runs the
-  verifier on Claude Haiku or Claude Sonnet through `claude -p` with the login that Claude Code
-  holds. The provider fields name `claude-code`. `verify_model_check` probes it.
+- The Claude Code verifier. verify-mcp pins verify `0a7bbf3` (verify PR #16). Since verify PR #11
+  (`102894a`), verify runs the verifier on Claude Haiku or Claude Sonnet through `claude -p` with the
+  login that Claude Code holds. The provider fields name `claude-code`. `verify_model_check` probes it.
 - `verify_runner` accepts the lanes `haiku` and `sonnet`, `lane_max` (one `--lane-max LANE=N` per
   lane; a strict object, so an unknown lane or `__proto__` is an input error) and `env`, which
   verify passes to every driver. The Claude Code lanes need `env: "none"`.
@@ -48,6 +48,15 @@ All notable changes to this project are recorded here. The format follows
   kill and the Windows path handling had no CI coverage.
 - Dependabot proposes weekly bumps for the SHA-pinned GitHub Actions. Dependabot alerts and CodeQL
   default setup are on for the repository.
+
+### Security
+
+- The verify pin takes verify's symlink hardening. The verifier can write `out/` in its task
+  workspace. verify now refuses a symlink there: a grader does not read through one (verify #15),
+  and the driver does not delete, write, create or list through one on the host (verify #16). What
+  the verifier leaves under `out/` no longer stops a task before its result is recorded (verify
+  #16). The pin also takes the review fixes of verify #12 and #13, among them an SB2 deliverable
+  that is a symlink is refused, and the jail stops when a read-only remount fails.
 
 ## [0.1.1] - 2026-10-04
 

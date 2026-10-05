@@ -22157,7 +22157,7 @@ function parseHelpCommands(usage) {
 }
 
 // src/pin.ts
-var VERIFY_GIT_REF = "102894aa4831c18e11feb9a86dee8fcf30de4e1d";
+var VERIFY_GIT_REF = "0a7bbf3713dc92b27866019299f30f01fb51f468";
 var VERIFY_GIT_SPEC = `github:danielsimonjr/verify#${VERIFY_GIT_REF}`;
 
 // src/resolve.ts
