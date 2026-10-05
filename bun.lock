@@ -6,7 +6,7 @@
       "name": "verify-mcp",
       "dependencies": {
         "@modelcontextprotocol/server": "2.3.0",
-        "veriharness": "github:danielsimonjr/verify#102894aa4831c18e11feb9a86dee8fcf30de4e1d",
+        "veriharness": "github:danielsimonjr/verify#0a7bbf3713dc92b27866019299f30f01fb51f468",
         "zod": "4.2.0",
       },
       "devDependencies": {
@@ -257,7 +257,7 @@
 
     "uuid": ["uuid@8.3.2", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg=="],
 
-    "veriharness": ["veriharness@github:danielsimonjr/verify#102894a", { "dependencies": { "exceljs": "^4.4.0", "fast-xml-parser": "^5.7.0", "jszip": "^3.10.1", "pdfjs-dist": "^4.10.38", "playwright": "^1.50.0" }, "bin": { "veriharness": "./dist/harness/cli.js" } }, "danielsimonjr-verify-102894a", "sha512-pUs/cGyk1Sgig8H6Dvpg04slJT3nMpP5SkDBCYvQw5zYIyZ00Ab4HxmcBNcKIh2Z4pTzcEdcJfYaPYuCxt1irw=="],
+    "veriharness": ["veriharness@github:danielsimonjr/verify#0a7bbf3", { "dependencies": { "exceljs": "^4.4.0", "fast-xml-parser": "^5.7.0", "jszip": "^3.10.1", "pdfjs-dist": "^4.10.38", "playwright": "^1.50.0" }, "bin": { "veriharness": "./dist/harness/cli.js" } }, "danielsimonjr-verify-0a7bbf3", "sha512-PwQ8b3LjaPCfr/qX/GqzlpAWzGKfH3SiNXUBirNGuvht6B6sYwpmcZ9W9/rqhqhWmmTcfOeEY7ASmFhuLglATg=="],
 
     "which": ["which@2.0.2", "", { "dependencies": { "isexe": "^2.0.0" }, "bin": { "node-which": "./bin/node-which" } }, "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA=="],
 
