@@ -86,6 +86,35 @@ describe("handlers", () => {
     }
   });
 
+  // A VERIHARNESS_BIN checkout from before verify PR #11 knows only the local providers.
+  test("model-check explains a verify build without the Claude Code provider", async () => {
+    const outcome = await handleModelCheck(
+      { provider: "claude-code", model: "claude-haiku-4-5-20251001" },
+      deps({
+        async run() {
+          const stderr = "error: provider 'claude-code' is not a local backend (expected ollama or llamacpp)\n";
+          return { code: 2, stdout: "", stderr, timedOut: false, aborted: false, durationMs: 3 };
+        },
+      }),
+    );
+    expect(outcome.isError).toBe(true);
+    expect(outcome.text).toContain("does not include the Claude Code provider");
+    expect(outcome.text).toContain("is not a local backend");
+  });
+
+  // The pin moves; the commit that added model-check does not.
+  test("the missing model-check text names the commit that added it, not the pin", async () => {
+    const outcome = await handleModelCheck(
+      { provider: "ollama", model: "qwen" },
+      deps({
+        async run() {
+          return { code: 2, stdout: "", stderr: "unknown command: model-check\n", timedOut: false, aborted: false, durationMs: 3 };
+        },
+      }),
+    );
+    expect(outcome.text).toContain("756bc2b");
+  });
+
   test("timeout and missing install are errors", async () => {
     const timed = await handleDriver(
       { task_dir: "/t" },

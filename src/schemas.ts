@@ -2,7 +2,9 @@ import * as z from "zod";
 
 export const BENCHES = ["apex", "wsb", "wb", "sb2", "jb"] as const;
 /** Lane names in the pinned runner's config.LANES. tests/schemas.test.ts keeps both lists equal to the pin. */
-export const LANES = ["flash", "opus"] as const;
+export const LANES = ["flash", "opus", "haiku", "sonnet"] as const;
+/** The driver's execution environments. Provider claude-code and the haiku and sonnet lanes need `none`. */
+export const ENVS = ["jail", "none", "native", "native-full"] as const;
 
 // One path segment. The runner joins run_name and `${bench}_${pool}` under VERIHARNESS_RUNS and
 // deletes an existing task workspace there, so a separator or a leading dot (which covers "." and
@@ -15,6 +17,13 @@ const CELL = new RegExp(`^(?:${BENCHES.join("|")}):${SEGMENT}$`);
 const CAP = `(?:${[...BENCHES, "default"].join("|")})=[1-9][0-9]*`;
 const CELL_CAP = new RegExp(`^${CAP}(?:,${CAP})*$`);
 
+// A strict object, not a record: zod's partialRecord drops an own `__proto__` key without an error,
+// and the object's JSON Schema names each lane for the client.
+const laneCap = z.number().int().positive();
+const laneCaps = z
+  .object(Object.fromEntries(LANES.map((lane) => [lane, laneCap.optional()])) as Record<(typeof LANES)[number], z.ZodOptional<typeof laneCap>>)
+  .strict();
+
 const timeoutSeconds = z
   .number()
   .positive()
@@ -26,8 +35,15 @@ export const localModelShape = {
     .string()
     .min(1)
     .optional()
-    .describe("Model provider. Local servers: ollama, or llamacpp (aliases llama.cpp and llama-cpp)."),
-  model: z.string().min(1).optional().describe("Model name. Required by verify for ollama and llamacpp."),
+    .describe(
+      "Model provider. Local servers: ollama, or llamacpp (aliases llama.cpp and llama-cpp). Claude Code: " +
+        "claude-code, which uses the login Claude Code holds, needs a full model id and env none.",
+    ),
+  model: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Model name. Required by verify for ollama and llamacpp. For claude-code, a full model id such as claude-haiku-4-5-20251001."),
   base_url: z
     .string()
     .min(1)
@@ -53,8 +69,11 @@ export const modelCheckInput = z
     provider: z
       .string()
       .min(1)
-      .describe("Local provider: ollama, or llamacpp (aliases llama.cpp and llama-cpp)."),
-    model: z.string().min(1).describe("Model name to probe."),
+      .describe(
+        "Provider to probe: ollama, llamacpp (aliases llama.cpp and llama-cpp), or claude-code. For claude-code the " +
+          "check runs one isolated turn with the login Claude Code holds and reports the CLI version.",
+      ),
+    model: z.string().min(1).describe("Model name to probe. For claude-code, a full model id."),
     base_url: localModelShape.base_url,
     context_size: localModelShape.context_size,
     temperature: localModelShape.temperature,
@@ -76,9 +95,9 @@ export const driverInput = z
     no_skills: z.boolean().optional().describe("Pass --no-skills when true."),
     skills_mode: z.enum(["mounted", "auto"]).optional().describe("Omit to keep verify's default (mounted)."),
     env: z
-      .enum(["jail", "none", "native", "native-full"])
+      .enum(ENVS)
       .optional()
-      .describe("Execution environment. Omit to keep verify's default (jail)."),
+      .describe("Execution environment. Omit to keep verify's default (jail). Provider claude-code needs none."),
     turn_timeout: z.number().positive().optional().describe("Seconds, passed as --turn-timeout. Verify's default is 1800."),
     nudge_timeout: z.number().positive().optional().describe("Seconds, passed as --nudge-timeout. Verify's default is 600."),
     task_timeout: z.number().positive().optional().describe("Seconds, passed as --task-timeout. Verify's default is 3600."),
@@ -100,9 +119,26 @@ export const runnerInput = z
       .regex(new RegExp(`^${SEGMENT}$`), `run_name must be one path segment: ${SEGMENT_HELP}`)
       .describe("Run directory name under VERIHARNESS_RUNS. One path segment."),
     contract: z.enum(["artifact", "pick-only"]).optional(),
-    lane: z.enum(LANES).optional().describe("Verifier lane. Required when a pool is not itself a lane name."),
+    lane: z
+      .enum(LANES)
+      .optional()
+      .describe("Verifier lane: flash, opus, haiku or sonnet. Required when a pool is not itself a lane name."),
     max_flash: z.number().int().positive().optional().describe("In-flight cap for the flash lane. Verify's default is 25."),
     max_opus: z.number().int().positive().optional().describe("In-flight cap for the opus lane. Verify's default is 45."),
+    lane_max: laneCaps
+      .optional()
+      .describe(
+        "In-flight cap per lane, each passed as --lane-max LANE=N. Verify's defaults: flash 25, opus 45, haiku 2, " +
+          "sonnet 2. The Claude Code lanes start low because the subscription's usage limit is shared with the " +
+          "account's other Claude Code sessions.",
+      ),
+    env: z
+      .enum(ENVS)
+      .optional()
+      .describe(
+        "Execution environment, passed to every driver as --env. Omit to keep verify's default (jail). " +
+          "The haiku and sonnet lanes and provider claude-code need none.",
+      ),
     cell_cap: z
       .string()
       .regex(CELL_CAP, "cell_cap must be key=N[,key=N] with N a positive integer and key a bench name or default")
@@ -130,7 +166,16 @@ export const runnerInput = z
     timeout_seconds: timeoutSeconds,
     ...localModelShape,
   })
-  .strict();
+  .strict()
+  // The pinned runner applies --max-flash and --max-opus, then --lane-max over them, so a second value
+  // for the same lane would be dropped without a word.
+  .superRefine((input, ctx) => {
+    for (const [alias, lane] of [["max_flash", "flash"], ["max_opus", "opus"]] as const) {
+      if (input[alias] !== undefined && input.lane_max?.[lane] !== undefined) {
+        ctx.addIssue({ code: "custom", path: [alias], message: `set the ${lane} cap once: ${alias} or lane_max.${lane}` });
+      }
+    }
+  });
 /** Arguments of the verify_runner tool, as `runnerInput` parses them. */
 export type RunnerInput = z.infer<typeof runnerInput>;
 

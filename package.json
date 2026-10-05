@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.3.0",
-    "veriharness": "github:danielsimonjr/verify#756bc2b381b2505f307c850db5922820ce0b2e05",
+    "veriharness": "github:danielsimonjr/verify#102894aa4831c18e11feb9a86dee8fcf30de4e1d",
     "zod": "4.2.0"
   },
   "devDependencies": {
