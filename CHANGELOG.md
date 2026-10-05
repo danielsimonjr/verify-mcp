@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-05
+
 ### Added
 
 - The Claude Code verifier. verify-mcp pins verify `0a7bbf3` (verify PR #16). Since verify PR #11
