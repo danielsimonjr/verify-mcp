@@ -38,7 +38,10 @@ describe("runProcess", () => {
   // The pinned driver runs each agent turn as a DETACHED child and only its own timer kills it.
   // Detached, the child leads its own process group (POSIX) and leaves the parent's job object
   // (Windows), so killing the driver's group or the driver alone leaves the turn running.
-  test("kills a detached grandchild on timeout", async () => {
+  // The stop comes when the grandchild says it has started, not after a fixed delay: two Bun cold
+  // starts can take longer than any fixed delay on a loaded host, and a stop that lands before the
+  // grandchild exists proves nothing. A timeout and an abort run the same stop().
+  test("kills a detached grandchild when stopped", async () => {
     const dir = mkdtempSync(join(tmpdir(), "verify-grandchild-"));
     const started = join(dir, "started");
     const survived = join(dir, "survived");
@@ -48,12 +51,17 @@ describe("runProcess", () => {
     const parent =
       `Bun.spawn([process.execPath, "-e", ${JSON.stringify(grandchild)}], { stdio: ["ignore", "ignore", "ignore"], detached: true });` +
       `await Bun.sleep(30_000)`;
-    const result = await runProcess({ command: bun, args: ["-e", parent], env: envRecord(), timeoutMs: 1500 });
-    expect(result.timedOut).toBe(true);
-    await Bun.sleep(3500);
+    const stop = new AbortController();
+    const run = runProcess({ command: bun, args: ["-e", parent], env: envRecord(), timeoutMs: 20_000, signal: stop.signal });
+    for (let waited = 0; !existsSync(started) && waited < 15_000; waited += 50) await Bun.sleep(50);
     expect(existsSync(started)).toBe(true);
+    stop.abort();
+    const result = await run;
+    expect(result.aborted).toBe(true);
+    // Longer than the grandchild's 2.5 s sleep, so a grandchild that survived has written its file.
+    await Bun.sleep(3500);
     expect(existsSync(survived)).toBe(false);
-  }, 15_000);
+  }, 30_000);
 
   // A child that ignores SIGTERM outlives the first stop, so the timeout fires as well. A second stop
   // would arm a second SIGKILL timer that `finally` never clears, aimed at a stale pid list. On
