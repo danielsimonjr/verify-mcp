@@ -4,7 +4,7 @@ An MCP server for [verify](https://github.com/danielsimonjr/verify), the VeriHar
 harness. It lets an agent in Claude Code, Codex or Cursor verify a task, run a benchmark, and read
 the results through ten tools.
 
-verify-mcp is version 0.4.1. It is not published to npm or to a public plugin marketplace. Install it
+verify-mcp is version 0.4.2. It is not published to npm or to a public plugin marketplace. Install it
 from this repository.
 
 ## Contents
@@ -322,7 +322,7 @@ characters of stdout and of stderr.
 | `VERIFY_MCP_BASE_URL`, `VERIFY_MCP_CONTEXT_SIZE` | The default server URL and context size. A call that sets its own value keeps it |
 | `VERIFY_MCP_ENV` | The default execution environment of `verify_driver` (`none` on Windows) |
 
-The Claude Code plugin sets the default to Ollama, `qwen3.5:9b-64k`, `http://evo-x2:11434`, context size 65536 and env `none`. Verify refuses a model that does not report a `num_ctx` of at least the context size. `qwen3.5:9b-64k` is `qwen3.5:9b` with `PARAMETER num_ctx 65536`, made with `ollama create`, so the check passes whether or not the model is loaded. A call that names a provider or a model ignores the whole default.
+The plugin ships no default model. Its `.mcp.json` passes each of these variables through, empty when unset, so a machine sets its own default in the `env` block of its Claude Code `settings.json`. Verify refuses a model that does not report a `num_ctx` of at least the context size, so a default Ollama model needs a `num_ctx` set, in a variant made with `ollama create` or by loading the model at that size. A call that names a provider or a model ignores the whole default.
 
 The server expands `~` and passes a value that you set to verify as an absolute path.
 

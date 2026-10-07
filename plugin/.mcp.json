@@ -6,11 +6,11 @@
       "args": ["${CLAUDE_PLUGIN_ROOT}/bundle/index.mjs"],
       "env": {
         "VERIHARNESS_BIN": "~/Github/verify/harness/cli.ts",
-        "VERIFY_MCP_PROVIDER": "ollama",
-        "VERIFY_MCP_MODEL": "qwen3.5:9b-64k",
-        "VERIFY_MCP_BASE_URL": "http://evo-x2:11434",
-        "VERIFY_MCP_CONTEXT_SIZE": "65536",
-        "VERIFY_MCP_ENV": "none"
+        "VERIFY_MCP_PROVIDER": "${VERIFY_MCP_PROVIDER:-}",
+        "VERIFY_MCP_MODEL": "${VERIFY_MCP_MODEL:-}",
+        "VERIFY_MCP_BASE_URL": "${VERIFY_MCP_BASE_URL:-}",
+        "VERIFY_MCP_CONTEXT_SIZE": "${VERIFY_MCP_CONTEXT_SIZE:-}",
+        "VERIFY_MCP_ENV": "${VERIFY_MCP_ENV:-}"
       }
     }
   }

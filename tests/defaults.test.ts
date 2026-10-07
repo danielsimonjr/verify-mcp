@@ -7,8 +7,8 @@ import type { RunRequest, RunResult } from "../src/run.ts";
 
 const PROFILE = {
   VERIFY_MCP_PROVIDER: "ollama",
-  VERIFY_MCP_MODEL: "qwen3.5:9b",
-  VERIFY_MCP_BASE_URL: "http://evo-x2:11434",
+  VERIFY_MCP_MODEL: "sample-model",
+  VERIFY_MCP_BASE_URL: "http://models.example:11434",
   VERIFY_MCP_CONTEXT_SIZE: "65536",
   VERIFY_MCP_ENV: "none",
 };
@@ -22,8 +22,8 @@ describe("applyDefaultProfile", () => {
     expect(out).toEqual({
       task_dir: "/t",
       provider: "ollama",
-      model: "qwen3.5:9b",
-      base_url: "http://evo-x2:11434",
+      model: "sample-model",
+      base_url: "http://models.example:11434",
       context_size: 65536,
       env: "none",
     });
@@ -33,7 +33,7 @@ describe("applyDefaultProfile", () => {
     const out = apply({ base_url: "http://127.0.0.1:11434", context_size: 8192 }, PROFILE, false);
     expect(out.base_url).toBe("http://127.0.0.1:11434");
     expect(out.context_size).toBe(8192);
-    expect(out.model).toBe("qwen3.5:9b");
+    expect(out.model).toBe("sample-model");
   });
 
   test("does not touch a call that names a provider or a model", () => {
@@ -81,7 +81,7 @@ describe("handlers use the default profile", () => {
     const { calls, deps } = recorder();
     await handleDriver({ task_dir: "/t" }, deps);
     expect(calls[0]?.args.slice(1)).toEqual(
-      driverArgv({ task_dir: "/t", provider: "ollama", model: "qwen3.5:9b", base_url: "http://evo-x2:11434", context_size: 65536, env: "none" }),
+      driverArgv({ task_dir: "/t", provider: "ollama", model: "sample-model", base_url: "http://models.example:11434", context_size: 65536, env: "none" }),
     );
   });
 
@@ -89,7 +89,7 @@ describe("handlers use the default profile", () => {
     const { calls, deps } = recorder();
     await handleModelCheck({}, deps);
     expect(calls[0]?.args.slice(1)).toEqual([
-      "model-check", "--provider", "ollama", "--model", "qwen3.5:9b", "--base-url", "http://evo-x2:11434", "--context-size", "65536",
+      "model-check", "--provider", "ollama", "--model", "sample-model", "--base-url", "http://models.example:11434", "--context-size", "65536",
     ]);
   });
 

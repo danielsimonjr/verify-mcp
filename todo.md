@@ -25,3 +25,4 @@ Open work for this repository. Check an item off when it lands, in the same comm
 - 2026-10-06 — verify comes from npm (`@danielsimonjr/verify` 0.1.0), 0.3.0. Speed: no change. Stability: no change. Reliability: an exact registry version replaces a git commit, so `bun install` needs no GitHub access and no git clone of verify. Security: no change; the version is exact, and the lockfile holds the registry integrity hash. Maintainability: one pin in `src/pin.ts`, checked against `package.json` by a test. Left alone: the plugin still points at a verify checkout through `VERIHARNESS_BIN`; moving it to the npm package needs an install step at plugin start.
 - [x] Default model profile from the environment (`VERIFY_MCP_*`), 0.4.0
 - [x] Default model is the `qwen3.5:9b-64k` variant, 0.4.1
+- [x] The plugin ships no default model: pass VERIFY_MCP_* through empty, drop the model and host from the docs, pin it with a test, 0.4.2

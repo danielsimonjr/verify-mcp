@@ -8,6 +8,7 @@ import { join } from "node:path";
 const require = createRequire(import.meta.url);
 const addFormats = require("ajv-formats") as (ajv: Ajv) => Ajv;
 
+import { DEFAULT_PROFILE_KEYS } from "../src/defaults.ts";
 import { VERIFY_PACKAGE, VERIFY_VERSION } from "../src/pin.ts";
 import { PROTOCOL_VERSION, SERVER_VERSION } from "../src/protocol.ts";
 
@@ -65,6 +66,14 @@ describe("manifests", () => {
     expect(server.args).toEqual(["${CLAUDE_PLUGIN_ROOT}/bundle/index.mjs"]);
     // The CLI is spawned from a real checkout; it is not in the bundle.
     expect(server.env?.VERIHARNESS_BIN?.endsWith("/harness/cli.ts")).toBe(true);
+  });
+
+  test("the plugin ships no default model: each VERIFY_MCP_* variable passes through empty", () => {
+    // A machine sets its own default model in its own settings. The repository names no model or host.
+    const claude = readJson("plugin/.mcp.json") as { mcpServers: { verify: { env?: Record<string, string> } } };
+    const profile = Object.entries(claude.mcpServers.verify.env ?? {}).filter(([key]) => key.startsWith("VERIFY_MCP_"));
+    expect(profile.map(([key]) => key).sort()).toEqual([...DEFAULT_PROFILE_KEYS].sort());
+    for (const [key, value] of profile) expect(value).toBe(`\${${key}:-}`);
   });
 
   test("the Codex and Cursor registrations launch bun on src/index.ts", () => {
