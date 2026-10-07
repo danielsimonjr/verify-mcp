@@ -4,3 +4,5 @@ dist/
 *.log
 data/
 runs/
+# A local server entry copied from example.mcp.json. plugin/.mcp.json stays tracked: the plugin loads its server from it.
+/.mcp.json

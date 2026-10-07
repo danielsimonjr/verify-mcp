@@ -76,6 +76,16 @@ describe("manifests", () => {
     for (const [key, value] of profile) expect(value).toBe(`\${${key}:-}`);
   });
 
+  test("example.mcp.json sets every VERIFY_MCP_* variable with placeholders and the root .mcp.json is ignored", () => {
+    const example = readJson("example.mcp.json") as { mcpServers: { verify: { env: Record<string, string> } } };
+    const keys = Object.keys(example.mcpServers.verify.env).filter((key) => key.startsWith("VERIFY_MCP_"));
+    expect(keys.sort()).toEqual([...DEFAULT_PROFILE_KEYS].sort());
+    expect(example.mcpServers.verify.env.VERIFY_MCP_MODEL).toBe("your-model-name");
+    const ignore = readFileSync(join(import.meta.dir, "..", ".gitignore"), "utf8").split(/\r?\n/);
+    expect(ignore).toContain("/.mcp.json");
+    expect(ignore).not.toContain("plugin/.mcp.json");
+  });
+
   test("the Codex and Cursor registrations launch bun on src/index.ts", () => {
     const cursor = readJson("mcp.cursor.json") as { mcpServers: Record<string, { command: string; args: string[] }> };
     const codex = readJson("mcp.json") as {

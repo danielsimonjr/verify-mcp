@@ -26,3 +26,4 @@ Open work for this repository. Check an item off when it lands, in the same comm
 - [x] Default model profile from the environment (`VERIFY_MCP_*`), 0.4.0
 - [x] Default model variant that carries a num_ctx, 0.4.1 (the plugin default was removed in 0.4.2)
 - [x] The plugin ships no default model: pass VERIFY_MCP_* through empty, drop the model and host from the docs, pin it with a test, 0.4.2
+- [x] example.mcp.json for a user's own server entry, README mention, gitignore a local root .mcp.json

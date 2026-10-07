@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "verify": {
+      "type": "stdio",
+      "command": "bun",
+      "args": ["/absolute/path/to/verify-mcp/plugin/bundle/index.mjs"],
+      "env": {
+        "VERIHARNESS_BIN": "/absolute/path/to/verify/harness/cli.ts",
+        "VERIFY_MCP_PROVIDER": "ollama",
+        "VERIFY_MCP_MODEL": "your-model-name",
+        "VERIFY_MCP_BASE_URL": "http://localhost:11434",
+        "VERIFY_MCP_CONTEXT_SIZE": "65536",
+        "VERIFY_MCP_ENV": "none"
+      }
+    }
+  }
+}

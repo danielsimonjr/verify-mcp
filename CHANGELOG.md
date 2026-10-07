@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `example.mcp.json`: a server entry with every `VERIFY_MCP_*` variable and placeholder values, for a user to copy and set after installing. The README describes it. Git ignores a root `.mcp.json`, so a local copy stays local.
+
 ## [0.4.2] - 2026-10-07
 
 ### Changed

@@ -324,6 +324,8 @@ characters of stdout and of stderr.
 
 The plugin ships no default model. Its `.mcp.json` passes each of these variables through, empty when unset, so a machine sets its own default in the `env` block of its Claude Code `settings.json`. Verify refuses a model that does not report a `num_ctx` of at least the context size, so a default Ollama model needs a `num_ctx` set, in a variant made with `ollama create` or by loading the model at that size. A call that names a provider or a model ignores the whole default.
 
+`example.mcp.json` shows a server entry with every variable set and placeholder values. Copy it to `.mcp.json` in a project, or into your user `.mcp.json`, set the paths and the model, and use it when you run verify-mcp without the plugin. Git ignores a `.mcp.json` at the repository root, so a local copy stays local. With the plugin installed, set the `VERIFY_MCP_*` variables in the `env` block of your Claude Code `settings.json` instead of adding a second server.
+
 The server expands `~` and passes a value that you set to verify as an absolute path.
 
 The server gives verify its own environment. An MCP host can start a stdio server with a reduced
