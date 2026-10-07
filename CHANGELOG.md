@@ -6,11 +6,17 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-07
+
+### Changed
+
+- The plugin default model is `qwen3.5:9b-64k`, not `qwen3.5:9b`. Verify refuses a model that reports no `num_ctx`, and an unloaded `qwen3.5:9b` reports none, so the default failed whenever Ollama had unloaded the model. The variant carries `num_ctx` 65536 and shares the 9B weights.
+
 ## [0.4.0] - 2026-10-07
 
 ### Added
 
-- A default model profile from the environment: `VERIFY_MCP_PROVIDER`, `VERIFY_MCP_MODEL`, `VERIFY_MCP_BASE_URL`, `VERIFY_MCP_CONTEXT_SIZE` and `VERIFY_MCP_ENV`. `verify_driver` and `verify_model_check` use it when a call names no provider and no model. The plugin sets it to Ollama, `qwen3.5:9b`, `http://evo-x2:11434`, 65536 and `none`.
+- A default model profile from the environment: `VERIFY_MCP_PROVIDER`, `VERIFY_MCP_MODEL`, `VERIFY_MCP_BASE_URL`, `VERIFY_MCP_CONTEXT_SIZE` and `VERIFY_MCP_ENV`. `verify_driver` and `verify_model_check` use it when a call names no provider and no model. The plugin sets it to Ollama, `qwen3.5:9b` (changed in 0.4.1), `http://evo-x2:11434`, 65536 and `none`.
 
 ### Changed
 
