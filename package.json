@@ -1,6 +1,6 @@
 {
   "name": "verify-mcp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "MCP server wrapping danielsimonjr/verify (veriharness CLI)",
   "license": "Apache-2.0",
   "private": true,
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.3.0",
-    "verify": "github:danielsimonjr/verify#c10100be7cfb71339f2caa743d7a488909c4f8c5",
+    "verify": "github:danielsimonjr/verify#74a39c502aa07637c4bbba858f40581114590d0b",
     "zod": "4.2.0"
   },
   "devDependencies": {

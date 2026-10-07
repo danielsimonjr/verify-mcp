@@ -4,7 +4,7 @@ An MCP server for [verify](https://github.com/danielsimonjr/verify), the VeriHar
 harness. It lets an agent in Claude Code, Codex or Cursor verify a task, run a benchmark, and read
 the results through ten tools.
 
-verify-mcp is version 0.2.1. It is not published to npm or to a public plugin marketplace. Install it
+verify-mcp is version 0.2.2. It is not published to npm or to a public plugin marketplace. Install it
 from this repository.
 
 ## Contents
@@ -49,12 +49,12 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at commit `0a7bbf3`
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at commit `74a39c5`
   (the pinned commit) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
 - verify's agent runtime, pi, installed in that checkout: run `harness/scripts/setup_pi.sh` once.
-  It installs a pinned pi into `harness/vendor/`. `verify_driver` and `verify_runner` need it for
+  It installs the pinned pi (`@danielsimonjr/pi`) into `harness/vendor/`. `verify_driver` and `verify_runner` need it for
   every provider except `claude-code`.
 - A model for the verifier:
   - Claude Code: the `claude` program, version 2.1 or later, signed in on the host. verify uses

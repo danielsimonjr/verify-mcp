@@ -6,6 +6,16 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-06
+
+### Changed
+
+- verify-mcp pins verify `74a39c5`. That verify commit installs its pi agent runtime from
+  `@danielsimonjr/pi` (0.84.4) and not from `@earendil-works/pi-coding-agent`. The plugin still
+  launches the verify checkout through `VERIHARNESS_BIN`, so a checkout needs `setup_pi.sh` run again
+  after it is updated to that commit. No npm publish is involved: verify is a git dependency.
+- The README names the real pinned commit. It still named `0a7bbf3`.
+
 ## [0.2.1] - 2026-10-05
 
 ### Changed
