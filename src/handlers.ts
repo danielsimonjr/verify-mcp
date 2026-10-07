@@ -20,6 +20,7 @@ import {
   statusTimeoutSeconds,
   timeoutMs,
 } from "./argv.ts";
+import { applyDefaultProfile } from "./defaults.ts";
 import { VERIFY_SPEC, VERIFY_VERSION } from "./pin.ts";
 import { VerifyNotInstalledError, resolveVerifyLaunch, type VerifyLaunch } from "./resolve.ts";
 import { ResultPathError, DEFAULT_MAX_BYTES, listRuns, readArtifact, resultBase } from "./results.ts";
@@ -46,6 +47,8 @@ export interface CommandRunner {
 export interface Deps {
   runner: CommandRunner;
   resolveLaunch: () => VerifyLaunch;
+  /** The environment that holds the default model profile. Absent means no profile. */
+  env?: NodeJS.ProcessEnv;
 }
 
 /** Returns deps that spawn with `runProcess` and resolve each launch with `resolveVerifyLaunch`. */
@@ -53,6 +56,7 @@ export function defaultDeps(): Deps {
   return {
     runner: { run: runProcess },
     resolveLaunch: () => resolveVerifyLaunch(),
+    env: process.env,
   };
 }
 
@@ -255,7 +259,17 @@ export function handleStatus(input: StatusInput, deps: Deps, progress?: Progress
  * A failed run returns an error outcome. The error text explains a verify build that lacks
  * model-check.
  */
-export function handleModelCheck(input: ModelCheckInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
+export function handleModelCheck(raw: ModelCheckInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
+  const input = applyDefaultProfile(raw, deps.env, false);
+  if (!input.provider || !input.model) {
+    return Promise.resolve({
+      text:
+        "Name a provider and a model, or set VERIFY_MCP_PROVIDER and VERIFY_MCP_MODEL in the server environment " +
+        "to give verify_model_check a default.",
+      isError: true,
+      structured: { error: "no_model" },
+    });
+  }
   return withLaunch(deps, async (launch) => {
     const result = await invoke(
       deps,
@@ -270,7 +284,8 @@ export function handleModelCheck(input: ModelCheckInput, deps: Deps, progress?: 
 }
 
 /** Runs `veriharness driver`. A non-zero exit, a timeout or a cancel returns an error outcome. */
-export function handleDriver(input: DriverInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
+export function handleDriver(raw: DriverInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
+  const input = applyDefaultProfile(raw, deps.env, true);
   return withLaunch(deps, async (launch) => {
     const result = await invoke(deps, launch, "driver", driverArgv(input), driverTimeoutSeconds(input), progress);
     return finish("driver", result, false);

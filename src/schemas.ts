@@ -69,11 +69,13 @@ export const modelCheckInput = z
     provider: z
       .string()
       .min(1)
+      .optional()
       .describe(
         "Provider to probe: ollama, llamacpp (aliases llama.cpp and llama-cpp), or claude-code. For claude-code the " +
-          "check runs one isolated turn with the login Claude Code holds and reports the CLI version.",
+          "check runs one isolated turn with the login Claude Code holds and reports the CLI version. " +
+          "Omit provider and model to probe the server's default model.",
       ),
-    model: z.string().min(1).describe("Model name to probe. For claude-code, a full model id."),
+    model: z.string().min(1).optional().describe("Model name to probe. For claude-code, a full model id. Omit with provider to use the default."),
     base_url: localModelShape.base_url,
     context_size: localModelShape.context_size,
     temperature: localModelShape.temperature,

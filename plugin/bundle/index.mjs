@@ -21872,8 +21872,8 @@ var localModelShape = {
 };
 var statusInput = object({ timeout_seconds: timeoutSeconds }).strict();
 var modelCheckInput = object({
-  provider: string2().min(1).describe("Provider to probe: ollama, llamacpp (aliases llama.cpp and llama-cpp), or claude-code. For claude-code the " + "check runs one isolated turn with the login Claude Code holds and reports the CLI version."),
-  model: string2().min(1).describe("Model name to probe. For claude-code, a full model id."),
+  provider: string2().min(1).optional().describe("Provider to probe: ollama, llamacpp (aliases llama.cpp and llama-cpp), or claude-code. For claude-code the " + "check runs one isolated turn with the login Claude Code holds and reports the CLI version. " + "Omit provider and model to probe the server's default model."),
+  model: string2().min(1).optional().describe("Model name to probe. For claude-code, a full model id. Omit with provider to use the default."),
   base_url: localModelShape.base_url,
   context_size: localModelShape.context_size,
   temperature: localModelShape.temperature,
@@ -22154,6 +22154,32 @@ function parseHelpCommands(usage) {
       names.push(match[1]);
   }
   return names;
+}
+
+// src/defaults.ts
+function text(value) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+function applyDefaultProfile(input, env, withEnv) {
+  if (input.provider || input.model)
+    return input;
+  const provider = text(env?.VERIFY_MCP_PROVIDER);
+  const model = text(env?.VERIFY_MCP_MODEL);
+  if (!provider || !model)
+    return input;
+  const out = { ...input, provider, model };
+  const baseUrl = text(env?.VERIFY_MCP_BASE_URL);
+  if (out.base_url === undefined && baseUrl)
+    out.base_url = baseUrl;
+  const size = Number(text(env?.VERIFY_MCP_CONTEXT_SIZE));
+  if (out.context_size === undefined && Number.isInteger(size) && size > 0)
+    out.context_size = size;
+  const exec = text(env?.VERIFY_MCP_ENV);
+  if (withEnv && out.env === undefined && exec && ENVS.includes(exec)) {
+    out.env = exec;
+  }
+  return out;
 }
 
 // src/pin.ts
@@ -22614,7 +22640,8 @@ function extractJson(stdout) {
 function defaultDeps() {
   return {
     runner: { run: runProcess },
-    resolveLaunch: () => resolveVerifyLaunch()
+    resolveLaunch: () => resolveVerifyLaunch(),
+    env: process.env
   };
 }
 function progressFrom(ctx) {
@@ -22776,13 +22803,22 @@ ${result.stdout}`;
     };
   });
 }
-function handleModelCheck(input, deps, progress) {
+function handleModelCheck(raw, deps, progress) {
+  const input = applyDefaultProfile(raw, deps.env, false);
+  if (!input.provider || !input.model) {
+    return Promise.resolve({
+      text: "Name a provider and a model, or set VERIFY_MCP_PROVIDER and VERIFY_MCP_MODEL in the server environment " + "to give verify_model_check a default.",
+      isError: true,
+      structured: { error: "no_model" }
+    });
+  }
   return withLaunch(deps, async (launch) => {
     const result = await invoke2(deps, launch, "model-check", modelCheckArgv(input), modelCheckTimeoutSeconds(input), progress);
     return finish("model-check", result, true);
   });
 }
-function handleDriver(input, deps, progress) {
+function handleDriver(raw, deps, progress) {
+  const input = applyDefaultProfile(raw, deps.env, true);
   return withLaunch(deps, async (launch) => {
     const result = await invoke2(deps, launch, "driver", driverArgv(input), driverTimeoutSeconds(input), progress);
     return finish("driver", result, false);
@@ -22871,7 +22907,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.3.0";
+var SERVER_VERSION = "0.4.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or the runner lanes haiku and sonnet; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts

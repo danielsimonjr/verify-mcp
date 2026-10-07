@@ -45,7 +45,7 @@ describe("handlers", () => {
   test("schemas reject a bad cell and accept a driver payload", () => {
     expect(() => runnerInput.parse({ cells: ["nocolon"], run_name: "r" })).toThrow();
     expect(driverInput.parse({ task_dir: "/t", provider: "llama.cpp", model: "m" }).provider).toBe("llama.cpp");
-    expect(() => modelCheckInput.parse({ provider: "ollama" })).toThrow();
+    expect(modelCheckInput.parse({}).provider).toBeUndefined();
   });
 
   test("driver passes argv and returns stdout", async () => {

@@ -5,7 +5,12 @@
       "command": "bun",
       "args": ["${CLAUDE_PLUGIN_ROOT}/bundle/index.mjs"],
       "env": {
-        "VERIHARNESS_BIN": "~/Github/verify/harness/cli.ts"
+        "VERIHARNESS_BIN": "~/Github/verify/harness/cli.ts",
+        "VERIFY_MCP_PROVIDER": "ollama",
+        "VERIFY_MCP_MODEL": "qwen3.5:9b",
+        "VERIFY_MCP_BASE_URL": "http://evo-x2:11434",
+        "VERIFY_MCP_CONTEXT_SIZE": "65536",
+        "VERIFY_MCP_ENV": "none"
       }
     }
   }

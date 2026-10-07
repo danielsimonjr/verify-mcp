@@ -22,7 +22,7 @@ export const PROTOCOL_VERSION = "2026-07-28";
 
 export const SERVER_NAME = "verify";
 
-export const SERVER_VERSION = "0.3.0";
+export const SERVER_VERSION = "0.4.0";
 
 export const SERVER_INSTRUCTIONS =
   "Tools wrap the veriharness CLI from danielsimonjr/verify. " +
