@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { BENCHES as PINNED_BENCHES, LANES as PINNED_LANES } from "verify/harness/config.ts";
+import { BENCHES as PINNED_BENCHES, LANES as PINNED_LANES } from "@danielsimonjr/verify/harness/config.ts";
 
 import { BENCHES, LANES, driverInput, modelCheckInput, runnerInput } from "../src/schemas.ts";
 
