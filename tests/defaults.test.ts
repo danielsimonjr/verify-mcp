@@ -11,6 +11,10 @@ const PROFILE = {
   VERIFY_MCP_BASE_URL: "http://models.example:11434",
   VERIFY_MCP_CONTEXT_SIZE: "65536",
   VERIFY_MCP_ENV: "none",
+  VERIFY_MCP_THINKING: "low",
+  VERIFY_MCP_MAX_TOKENS: "16384",
+  VERIFY_MCP_REQUEST_TIMEOUT: "600",
+  VERIFY_MCP_NUDGE_TIMEOUT: "900",
 };
 
 type Input = ProfileFields & { task_dir?: string };
@@ -26,7 +30,30 @@ describe("applyDefaultProfile", () => {
       base_url: "http://models.example:11434",
       context_size: 65536,
       env: "none",
+      thinking: "low",
+      max_tokens: 16384,
+      request_timeout: 600,
+      nudge_timeout: 900,
     });
+  });
+
+  test("a tool without driver fields gets only the shared tuning", () => {
+    const out = apply({}, PROFILE, false);
+    expect(out.max_tokens).toBe(16384);
+    expect(out.request_timeout).toBe(600);
+    expect(out.thinking).toBeUndefined();
+    expect(out.nudge_timeout).toBeUndefined();
+    expect(out.env).toBeUndefined();
+  });
+
+  test("a bad or empty tuning value is ignored and a call value wins", () => {
+    const bad = { ...PROFILE, VERIFY_MCP_MAX_TOKENS: "-5", VERIFY_MCP_REQUEST_TIMEOUT: "x", VERIFY_MCP_NUDGE_TIMEOUT: "0", VERIFY_MCP_THINKING: " " };
+    const out = apply({ task_dir: "/t" }, bad, true);
+    expect(out.max_tokens).toBeUndefined();
+    expect(out.request_timeout).toBeUndefined();
+    expect(out.nudge_timeout).toBeUndefined();
+    expect(out.thinking).toBeUndefined();
+    expect(apply({ max_tokens: 100, thinking: "high" }, PROFILE, true)).toMatchObject({ max_tokens: 100, thinking: "high" });
   });
 
   test("keeps a field the call sets", () => {
@@ -55,7 +82,7 @@ describe("applyDefaultProfile", () => {
     expect(apply({}, PROFILE, false).env).toBeUndefined();
   });
 
-  test("lists the five env keys", () => {
+  test("lists the nine env keys", () => {
     expect([...DEFAULT_PROFILE_KEYS] as string[]).toEqual(Object.keys(PROFILE));
   });
 });
@@ -81,7 +108,7 @@ describe("handlers use the default profile", () => {
     const { calls, deps } = recorder();
     await handleDriver({ task_dir: "/t" }, deps);
     expect(calls[0]?.args.slice(1)).toEqual(
-      driverArgv({ task_dir: "/t", provider: "ollama", model: "sample-model", base_url: "http://models.example:11434", context_size: 65536, env: "none" }),
+      driverArgv({ task_dir: "/t", provider: "ollama", model: "sample-model", base_url: "http://models.example:11434", context_size: 65536, env: "none", thinking: "low", max_tokens: 16384, request_timeout: 600, nudge_timeout: 900 }),
     );
   });
 
@@ -89,7 +116,7 @@ describe("handlers use the default profile", () => {
     const { calls, deps } = recorder();
     await handleModelCheck({}, deps);
     expect(calls[0]?.args.slice(1)).toEqual([
-      "model-check", "--provider", "ollama", "--model", "sample-model", "--base-url", "http://models.example:11434", "--context-size", "65536",
+      "model-check", "--provider", "ollama", "--model", "sample-model", "--base-url", "http://models.example:11434", "--context-size", "65536", "--max-tokens", "16384", "--request-timeout", "600",
     ]);
   });
 

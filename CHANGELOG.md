@@ -6,8 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-07
+
 ### Added
 
+- Tuning in the default profile: `VERIFY_MCP_THINKING` and `VERIFY_MCP_NUDGE_TIMEOUT` (`verify_driver`), and `VERIFY_MCP_MAX_TOKENS` and `VERIFY_MCP_REQUEST_TIMEOUT` (`verify_driver` and `verify_model_check`). They follow the same rule as the other profile fields: used only when the call names no provider and no model, and only for a field the call omits. `plugin/.mcp.json` passes them through empty and `example.mcp.json` lists them.
 - `example.mcp.json`: a server entry with every `VERIFY_MCP_*` variable and placeholder values, for a user to copy and set after installing. The README describes it. Git ignores a root `.mcp.json`, so a local copy stays local.
 
 ## [0.4.2] - 2026-10-07

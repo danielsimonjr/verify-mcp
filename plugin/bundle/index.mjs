@@ -22161,7 +22161,12 @@ function text(value) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
 }
-function applyDefaultProfile(input, env, withEnv) {
+function positive(value) {
+  const raw = text(value);
+  const n = raw === undefined ? NaN : Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+function applyDefaultProfile(input, env, driver) {
   if (input.provider || input.model)
     return input;
   const provider = text(env?.VERIFY_MCP_PROVIDER);
@@ -22172,13 +22177,27 @@ function applyDefaultProfile(input, env, withEnv) {
   const baseUrl = text(env?.VERIFY_MCP_BASE_URL);
   if (out.base_url === undefined && baseUrl)
     out.base_url = baseUrl;
-  const size = Number(text(env?.VERIFY_MCP_CONTEXT_SIZE));
-  if (out.context_size === undefined && Number.isInteger(size) && size > 0)
+  const size = positive(env?.VERIFY_MCP_CONTEXT_SIZE);
+  if (out.context_size === undefined && size !== undefined && Number.isInteger(size))
     out.context_size = size;
+  const tokens = positive(env?.VERIFY_MCP_MAX_TOKENS);
+  if (out.max_tokens === undefined && tokens !== undefined && Number.isInteger(tokens))
+    out.max_tokens = tokens;
+  const request = positive(env?.VERIFY_MCP_REQUEST_TIMEOUT);
+  if (out.request_timeout === undefined && request !== undefined)
+    out.request_timeout = request;
+  if (!driver)
+    return out;
   const exec = text(env?.VERIFY_MCP_ENV);
-  if (withEnv && out.env === undefined && exec && ENVS.includes(exec)) {
+  if (out.env === undefined && exec && ENVS.includes(exec)) {
     out.env = exec;
   }
+  const thinking = text(env?.VERIFY_MCP_THINKING);
+  if (out.thinking === undefined && thinking)
+    out.thinking = thinking;
+  const nudge = positive(env?.VERIFY_MCP_NUDGE_TIMEOUT);
+  if (out.nudge_timeout === undefined && nudge !== undefined)
+    out.nudge_timeout = nudge;
   return out;
 }
 
@@ -22907,7 +22926,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.4.2";
+var SERVER_VERSION = "0.5.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or the runner lanes haiku and sonnet; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts
