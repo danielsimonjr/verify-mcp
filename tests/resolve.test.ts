@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, sep } from "node:path";
 
-import { VERIFY_GIT_REF } from "../src/pin.ts";
+import { VERIFY_SPEC } from "../src/pin.ts";
 import { VerifyNotInstalledError, resolveVerifyLaunch } from "../src/resolve.ts";
 
 describe("resolveVerifyLaunch", () => {
@@ -12,7 +12,7 @@ describe("resolveVerifyLaunch", () => {
     expect(launch.source).toBe("package");
     expect(launch.command).toContain("bun");
     // Segments, not a "/" pattern: a Windows path separates with "\".
-    expect(launch.args[0]!.split(sep).slice(-4)).toEqual(["node_modules", "verify", "harness", "cli.ts"]);
+    expect(launch.args[0]!.split(sep).slice(-5)).toEqual(["node_modules", "@danielsimonjr", "verify", "harness", "cli.ts"]);
     expect(launch.dataDir).toBe(join(process.cwd(), "data"));
     expect(launch.runsDir).toBe(join(process.cwd(), "runs"));
     expect(launch.env.VERIHARNESS_DATA).toBe(launch.dataDir);
@@ -45,7 +45,7 @@ describe("resolveVerifyLaunch", () => {
       resolveVerifyLaunch({ ...process.env, VERIHARNESS_BIN: "/no/such/veriharness" });
     } catch (err) {
       expect(err).toBeInstanceOf(VerifyNotInstalledError);
-      expect((err as Error).message).toContain(VERIFY_GIT_REF);
+      expect((err as Error).message).toContain(VERIFY_SPEC);
       expect((err as Error).message).toContain("bun install");
     }
   });

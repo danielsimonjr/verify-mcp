@@ -13,6 +13,7 @@ import {
   type CommandRunner,
   type Deps,
 } from "../src/handlers.ts";
+import { VERIFY_SPEC } from "../src/pin.ts";
 import { VerifyNotInstalledError, type VerifyLaunch } from "../src/resolve.ts";
 import type { RunRequest, RunResult } from "../src/run.ts";
 import { driverInput, modelCheckInput, runnerInput } from "../src/schemas.ts";
@@ -151,7 +152,7 @@ describe("handlers", () => {
       }),
     );
     expect(outcome.structured?.modelCheck).toBe(true);
-    expect(outcome.structured?.pin).toHaveLength(40);
+    expect(outcome.structured?.pin).toBe(VERIFY_SPEC);
   });
 
   test("list and read use the launch runs directory", async () => {

@@ -20,7 +20,7 @@ import {
   statusTimeoutSeconds,
   timeoutMs,
 } from "./argv.ts";
-import { VERIFY_GIT_REF } from "./pin.ts";
+import { VERIFY_SPEC, VERIFY_VERSION } from "./pin.ts";
 import { VerifyNotInstalledError, resolveVerifyLaunch, type VerifyLaunch } from "./resolve.ts";
 import { ResultPathError, DEFAULT_MAX_BYTES, listRuns, readArtifact, resultBase } from "./results.ts";
 import { extractJson, runProcess, type RunRequest, type RunResult } from "./run.ts";
@@ -106,12 +106,12 @@ export function progressFrom(ctx: ServerContext): ProgressCtx {
 
 const MODEL_CHECK_MISSING =
   `This verify build does not include model-check. It was added with the Ollama and llama.cpp ` +
-  `backends (verify PR #2, commit 756bc2b). The pinned ref ${VERIFY_GIT_REF.slice(0, 7)} includes it; ` +
+  `backends (verify PR #2, commit 756bc2b). The pinned version ${VERIFY_VERSION} includes it; ` +
   `this VERIHARNESS_BIN is older.`;
 
 const CLAUDE_CODE_MISSING =
   `This verify build does not include the Claude Code provider. It was added with the Haiku and Sonnet ` +
-  `lanes (verify PR #11, commit 102894a). The pinned ref ${VERIFY_GIT_REF.slice(0, 7)} includes it; ` +
+  `lanes (verify PR #11, commit 102894a). The pinned version ${VERIFY_VERSION} includes it; ` +
   `this VERIHARNESS_BIN is older.`;
 
 function explain(command: string, result: RunResult): string {
@@ -225,7 +225,7 @@ export function handleStatus(input: StatusInput, deps: Deps, progress?: Progress
     const usage = `${result.stderr}\n${result.stdout}`;
     const commands = parseHelpCommands(usage);
     const structured = {
-      pin: VERIFY_GIT_REF,
+      pin: VERIFY_SPEC,
       source: launch.source,
       command: launch.command,
       args: launch.args,
@@ -237,7 +237,7 @@ export function handleStatus(input: StatusInput, deps: Deps, progress?: Progress
     };
     return {
       text: [
-        `pin ${VERIFY_GIT_REF}`,
+        `pin ${VERIFY_SPEC}`,
         `command ${launch.command} ${launch.args.join(" ")}`.trim(),
         `data ${launch.dataDir}`,
         `runs ${launch.runsDir}`,

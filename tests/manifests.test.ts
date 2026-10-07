@@ -8,7 +8,7 @@ import { join } from "node:path";
 const require = createRequire(import.meta.url);
 const addFormats = require("ajv-formats") as (ajv: Ajv) => Ajv;
 
-import { VERIFY_GIT_REF } from "../src/pin.ts";
+import { VERIFY_PACKAGE, VERIFY_VERSION } from "../src/pin.ts";
 import { PROTOCOL_VERSION, SERVER_VERSION } from "../src/protocol.ts";
 
 const ROOT = join(import.meta.dir, "..");
@@ -91,12 +91,13 @@ describe("manifests", () => {
 
   test("the package pin and protocol revision match the source of truth", () => {
     const pkg = readJson("package.json") as { dependencies: Record<string, string> };
-    expect(pkg.dependencies.verify).toContain(VERIFY_GIT_REF);
+    expect(pkg.dependencies[VERIFY_PACKAGE]).toBe(VERIFY_VERSION);
+    expect(pkg.dependencies).not.toHaveProperty("verify");
     expect(pkg.dependencies).not.toHaveProperty("veriharness");
     expect(pkg.dependencies["@modelcontextprotocol/server"]).toBe("2.3.0");
     expect(PROTOCOL_VERSION).toBe("2026-07-28");
     const pin = readFileSync(join(ROOT, "src", "pin.ts"), "utf8");
-    expect(pin).toContain(VERIFY_GIT_REF);
+    expect(pin).toContain(VERIFY_VERSION);
   });
 
   test("every manifest carries the package.json version", () => {

@@ -22157,8 +22157,9 @@ function parseHelpCommands(usage) {
 }
 
 // src/pin.ts
-var VERIFY_GIT_REF = "74a39c502aa07637c4bbba858f40581114590d0b";
-var VERIFY_GIT_SPEC = `github:danielsimonjr/verify#${VERIFY_GIT_REF}`;
+var VERIFY_PACKAGE = "@danielsimonjr/verify";
+var VERIFY_VERSION = "0.1.0";
+var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
 import { existsSync } from "fs";
@@ -22169,7 +22170,7 @@ var require2 = createRequire(import.meta.url);
 
 class VerifyNotInstalledError extends Error {
   constructor(detail) {
-    super(`verify is not installed. ${detail} verify-mcp pins verify to ${VERIFY_GIT_SPEC} ` + `(commit ${VERIFY_GIT_REF}). Run \`bun install\` in the verify-mcp directory, or set ` + `VERIHARNESS_BIN to the veriharness executable or to harness/cli.ts.`);
+    super(`verify is not installed. ${detail} verify-mcp pins verify to ${VERIFY_SPEC}. ` + `Run \`bun install\` in the verify-mcp directory, or set ` + `VERIHARNESS_BIN to the veriharness executable or to harness/cli.ts.`);
     this.name = "VerifyNotInstalledError";
   }
 }
@@ -22258,7 +22259,7 @@ function resolveVerifyLaunch(env = process.env, cwd = process.cwd()) {
   } else {
     let pkgJson;
     try {
-      pkgJson = require2.resolve("verify/package.json");
+      pkgJson = require2.resolve(`${VERIFY_PACKAGE}/package.json`);
     } catch {
       throw new VerifyNotInstalledError("The verify package is not installed.");
     }
@@ -22643,8 +22644,8 @@ function progressFrom(ctx) {
     }
   };
 }
-var MODEL_CHECK_MISSING = `This verify build does not include model-check. It was added with the Ollama and llama.cpp ` + `backends (verify PR #2, commit 756bc2b). The pinned ref ${VERIFY_GIT_REF.slice(0, 7)} includes it; ` + `this VERIHARNESS_BIN is older.`;
-var CLAUDE_CODE_MISSING = `This verify build does not include the Claude Code provider. It was added with the Haiku and Sonnet ` + `lanes (verify PR #11, commit 102894a). The pinned ref ${VERIFY_GIT_REF.slice(0, 7)} includes it; ` + `this VERIHARNESS_BIN is older.`;
+var MODEL_CHECK_MISSING = `This verify build does not include model-check. It was added with the Ollama and llama.cpp ` + `backends (verify PR #2, commit 756bc2b). The pinned version ${VERIFY_VERSION} includes it; ` + `this VERIHARNESS_BIN is older.`;
+var CLAUDE_CODE_MISSING = `This verify build does not include the Claude Code provider. It was added with the Haiku and Sonnet ` + `lanes (verify PR #11, commit 102894a). The pinned version ${VERIFY_VERSION} includes it; ` + `this VERIHARNESS_BIN is older.`;
 function explain(command, result) {
   const combined = `${result.stderr}
 ${result.stdout}`;
@@ -22751,7 +22752,7 @@ function handleStatus(input, deps, progress) {
 ${result.stdout}`;
     const commands = parseHelpCommands(usage);
     const structured = {
-      pin: VERIFY_GIT_REF,
+      pin: VERIFY_SPEC,
       source: launch.source,
       command: launch.command,
       args: launch.args,
@@ -22763,7 +22764,7 @@ ${result.stdout}`;
     };
     return {
       text: [
-        `pin ${VERIFY_GIT_REF}`,
+        `pin ${VERIFY_SPEC}`,
         `command ${launch.command} ${launch.args.join(" ")}`.trim(),
         `data ${launch.dataDir}`,
         `runs ${launch.runsDir}`,
@@ -22870,7 +22871,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.2.2";
+var SERVER_VERSION = "0.3.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or the runner lanes haiku and sonnet; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts

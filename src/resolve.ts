@@ -3,21 +3,21 @@ import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 
-import { VERIFY_GIT_REF, VERIFY_GIT_SPEC } from "./pin.ts";
+import { VERIFY_PACKAGE, VERIFY_SPEC } from "./pin.ts";
 
 const require = createRequire(import.meta.url);
 
 /**
  * Error for a missing Bun or veriharness CLI.
  *
- * The message adds the pinned spec and commit, and tells the user to run `bun install` or set
+ * The message adds the pinned package spec, and tells the user to run `bun install` or set
  * VERIHARNESS_BIN.
  */
 export class VerifyNotInstalledError extends Error {
   constructor(detail: string) {
     super(
-      `verify is not installed. ${detail} verify-mcp pins verify to ${VERIFY_GIT_SPEC} ` +
-        `(commit ${VERIFY_GIT_REF}). Run \`bun install\` in the verify-mcp directory, or set ` +
+      `verify is not installed. ${detail} verify-mcp pins verify to ${VERIFY_SPEC}. ` +
+        `Run \`bun install\` in the verify-mcp directory, or set ` +
         `VERIHARNESS_BIN to the veriharness executable or to harness/cli.ts.`,
     );
     this.name = "VerifyNotInstalledError";
@@ -88,7 +88,7 @@ function isPackagedRoot(verifyRoot: string): boolean {
  * Resolves the data and runs folders and the child env.
  *
  * A non-empty `VERIHARNESS_DATA` or `VERIHARNESS_RUNS` sets its folder. Otherwise a packaged install
- * (node_modules/verify) uses `cwd`/data and `cwd`/runs, and a checkout uses `verifyRoot`/data
+ * (node_modules/@danielsimonjr/verify) uses `cwd`/data and `cwd`/runs, and a checkout uses `verifyRoot`/data
  * and `verifyRoot`/runs. The child env gets the resolved path when the variable was set or the
  * install is packaged.
  */
@@ -159,7 +159,7 @@ export function resolveVerifyLaunch(env: NodeJS.ProcessEnv = process.env, cwd = 
   } else {
     let pkgJson: string;
     try {
-      pkgJson = require.resolve("verify/package.json");
+      pkgJson = require.resolve(`${VERIFY_PACKAGE}/package.json`);
     } catch {
       throw new VerifyNotInstalledError("The verify package is not installed.");
     }

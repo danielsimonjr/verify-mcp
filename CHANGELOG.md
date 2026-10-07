@@ -6,6 +6,15 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-06
+
+### Changed
+
+- verify-mcp installs verify from npm: the dependency is `@danielsimonjr/verify` at exactly 0.1.0, and not a GitHub
+  commit. `src/pin.ts` holds the package name and the version, and a test keeps `package.json` equal to them.
+  `verify_status` reports the pin as `@danielsimonjr/verify@0.1.0`.
+- The plugin still starts the verify checkout through `VERIHARNESS_BIN`: an installed plugin has no `node_modules`.
+
 ## [0.2.2] - 2026-10-06
 
 ### Changed

@@ -4,7 +4,7 @@ An MCP server for [verify](https://github.com/danielsimonjr/verify), the VeriHar
 harness. It lets an agent in Claude Code, Codex or Cursor verify a task, run a benchmark, and read
 the results through ten tools.
 
-verify-mcp is version 0.2.2. It is not published to npm or to a public plugin marketplace. Install it
+verify-mcp is version 0.3.0. It is not published to npm or to a public plugin marketplace. Install it
 from this repository.
 
 ## Contents
@@ -49,8 +49,8 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at commit `74a39c5`
-  (the pinned commit) or later, with its dependencies installed (`bun install`). The Claude Code
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.1.0
+  (`@danielsimonjr/verify`, the pinned version) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
 - verify's agent runtime, pi, installed in that checkout: run `harness/scripts/setup_pi.sh` once.
@@ -301,7 +301,7 @@ characters of stdout and of stderr.
 | Message starts with | Cause | Action |
 | --- | --- | --- |
 | verify is not installed | The server found no verify command | Set `VERIHARNESS_BIN`, or run `bun install` in this repository |
-| model-check is absent | The verify build is older than commit `756bc2b` | Update the verify checkout |
+| model-check is absent | The verify build is older than commit `756bc2b` (verify 0.1.0 has it) | Update the verify checkout |
 | The local model server is down | Ollama or `llama-server` did not answer | Start the server, or set `base_url` |
 
 ## Configuration
@@ -336,8 +336,8 @@ The server looks for the command in this order:
 
 1. `VERIHARNESS_BIN`. A `.ts`, `.js` or `.mjs` file starts with `bun`. Any other file runs as it
    is.
-2. `node_modules/verify/harness/cli.ts`, which `bun install` in this repository puts there.
-   It is pinned to the verify commit named in `src/pin.ts`.
+2. `node_modules/@danielsimonjr/verify/harness/cli.ts`, which `bun install` in this repository puts there.
+   It is the npm package `@danielsimonjr/verify`, pinned to the exact version named in `src/pin.ts`.
 
 With the copy in `node_modules`, and no `VERIHARNESS_DATA` or `VERIHARNESS_RUNS` set, the data and
 run directories are `./data` and `./runs` in the server's working directory. That keeps run output
