@@ -2,6 +2,7 @@ import { McpServer, type CallToolResult, type ServerContext } from "@modelcontex
 
 import {
   defaultDeps,
+  handleBatch,
   handleDriver,
   handleEnvDerive,
   handleGrade,
@@ -12,12 +13,14 @@ import {
   handleRunner,
   handleScore,
   handleStatus,
+  handleWorkers,
   progressFrom,
   type Deps,
   type ToolOutcome,
 } from "./handlers.ts";
 import { PROTOCOL_VERSION, SERVER_INSTRUCTIONS, SERVER_NAME, SERVER_VERSION } from "./protocol.ts";
 import {
+  batchInput,
   driverInput,
   envDeriveInput,
   gradeInput,
@@ -28,6 +31,7 @@ import {
   runnerInput,
   scoreInput,
   statusInput,
+  workersInput,
 } from "./schemas.ts";
 
 export const TOOL_NAMES = [
@@ -35,6 +39,8 @@ export const TOOL_NAMES = [
   "verify_model_check",
   "verify_driver",
   "verify_runner",
+  "verify_batch",
+  "verify_workers",
   "verify_score",
   "verify_grade",
   "verify_materialize",
@@ -55,7 +61,7 @@ function call(outcome: Promise<ToolOutcome>): Promise<CallToolResult> {
 }
 
 /**
- * Creates the verify MCP server with its ten tools.
+ * Creates the verify MCP server with its twelve tools.
  *
  * The server declares the tools capability only. The 2026-07-28 revision deprecates server logging.
  * The revision also replaces the server-to-client roots and sampling requests with input_required,
@@ -124,6 +130,34 @@ export function createVerifyServer(deps: Deps = defaultDeps()): McpServer {
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     },
     async (args, ctx) => call(handleRunner(args, deps, progressFrom(ctx))),
+  );
+
+  server.registerTool(
+    "verify_batch",
+    {
+      title: "Split items into batches",
+      description:
+        "Run `veriharness batch`: split an items file into task folders that each fit a token budget. " +
+        "Give batch_tokens, or the worker model (provider and model) to use half its window; context_size auto " +
+        "uses the window the server reports. Returns manifest.json, with the window and its source.",
+      inputSchema: batchInput,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    },
+    async (args, ctx) => call(handleBatch(args, deps, progressFrom(ctx))),
+  );
+
+  server.registerTool(
+    "verify_workers",
+    {
+      title: "Run worker rollouts on batches",
+      description:
+        "Run `veriharness workers`: N worker rollouts on each batch of a verify_batch folder, each in its own " +
+        "temp copy. A second call skips complete rollouts. Each finished rollout is one progress notice. " +
+        "Claude Code workers need env none. Default wall clock is 12 hours.",
+      inputSchema: workersInput,
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    },
+    async (args, ctx) => call(handleWorkers(args, deps, progressFrom(ctx))),
   );
 
   server.registerTool(

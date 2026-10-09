@@ -26,6 +26,12 @@ const laneCaps = z
   .object(Object.fromEntries(LANES.map((lane) => [lane, laneCap.optional()])) as Record<(typeof LANES)[number], z.ZodOptional<typeof laneCap>>)
   .strict();
 
+// verify's parseContextSize and --role-context-size refuse 4096 or less at parse time: pi withholds
+// 4096 tokens of every window.
+const serverContextSize = z
+  .union([z.number().int().gt(4096, "context_size must be above 4096"), z.literal("auto")])
+  .optional();
+
 const timeoutSeconds = z
   .number()
   .positive()
@@ -51,7 +57,13 @@ export const localModelShape = {
     .min(1)
     .optional()
     .describe("Local server URL. Ollama defaults to http://127.0.0.1:11434, llama.cpp to http://127.0.0.1:8080."),
-  context_size: z.number().int().positive().optional().describe("Context length passed as --context-size."),
+  context_size: z
+    .union([z.number().int().positive(), z.literal("auto")])
+    .optional()
+    .describe(
+      "Context length passed as --context-size, or auto for the window the server reports (a loaded Ollama model, " +
+        "then num_ctx, then llama.cpp's n_ctx). auto also overrides VERIHARNESS_CONTEXT_SIZE. Verify needs more than 4096.",
+    ),
   temperature: z.number().optional().describe("Sampling temperature passed as --temperature."),
   max_tokens: z.number().int().positive().optional().describe("Max tokens passed as --max-tokens."),
   top_p: z.number().optional().describe("Top-p passed as --top-p."),
@@ -73,12 +85,10 @@ const roleModel = z
       .describe("Provider of this role: ollama, llamacpp, claude-code, or a pi provider."),
     model: z.string().min(1).describe("Model of this role. For claude-code, a full model id. May contain colons."),
     base_url: z.string().min(1).optional().describe("Server of a local (ollama or llamacpp) role, passed as --role-base-url."),
-    context_size: z
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .describe("Context window of a local role, passed as --role-context-size. Verify needs more than 4096."),
+    context_size: serverContextSize.describe(
+      "Context window of a local role, passed as --role-context-size: a whole number above 4096, or auto for the " +
+        "window the server reports.",
+    ),
   })
   .strict();
 
@@ -262,6 +272,73 @@ export const envDeriveInput = z
   .strict();
 /** Arguments of the verify_env_derive tool, as `envDeriveInput` parses them. */
 export type EnvDeriveInput = z.infer<typeof envDeriveInput>;
+
+const SPLIT_RULE = /^(?:jsonl|blank-line|heading:.+)$/;
+
+export const batchInput = z
+  .object({
+    items: z.string().min(1).describe("The items file to split."),
+    split: z
+      .string()
+      .regex(SPLIT_RULE, "split must be jsonl, blank-line or heading:REGEX")
+      .describe(
+        "How to split the items: jsonl (one item per line, id from its id field), blank-line (blocks between " +
+          "blank lines), or heading:REGEX (an item starts at each matching line; the first capture group is the id).",
+      ),
+    spec: z.string().min(1).describe("The task file. Each batch gets it as spec/task.md."),
+    out: z.string().min(1).describe("The output folder. It must not exist or must be empty."),
+    shared: z.array(z.string().min(1)).optional().describe("Files or folders every batch gets in workspace/. Each becomes --shared."),
+    prompt: z.string().min(1).optional().describe("The worker prompt, copied to OUT/worker_prompt.md for verify_workers."),
+    items_name: z.string().min(1).optional().describe("File name of the items in workspace/. Default items.jsonl or items.md."),
+    batch_tokens: z.number().int().positive().optional().describe("The token budget of one batch. Give this or the worker model."),
+    provider: localModelShape.provider,
+    model: localModelShape.model,
+    base_url: localModelShape.base_url,
+    context_size: serverContextSize.describe(
+      "The worker model's window: a whole number above 4096, or auto. Omit for auto. The budget is half the window.",
+    ),
+    chars_per_token: z.number().positive().optional().describe("Characters per token in the estimate. Verify's default is 3.6."),
+    overhead_tokens: z.number().int().nonnegative().optional().describe("Tokens each batch costs beyond its text. Verify's default is 2000."),
+    item_tokens: z.number().int().nonnegative().optional().describe("Tokens of output each item adds. Verify's default is 0."),
+    max_items: z.number().int().positive().optional().describe("Most items in one batch."),
+    timeout_seconds: timeoutSeconds,
+  })
+  .strict()
+  .superRefine((input, ctx) => {
+    if (input.batch_tokens !== undefined && (input.provider !== undefined || input.model !== undefined)) {
+      ctx.addIssue({ code: "custom", path: ["batch_tokens"], message: "give batch_tokens or the worker model (provider and model), not both" });
+    }
+  });
+/** Arguments of the verify_batch tool, as `batchInput` parses them. */
+export type BatchInput = z.infer<typeof batchInput>;
+
+export const workersInput = z
+  .object({
+    dir: z.string().min(1).describe("A verify_batch output folder, or one task folder with spec/ and workspace/."),
+    provider: localModelShape.provider,
+    model: localModelShape.model,
+    base_url: localModelShape.base_url,
+    context_size: serverContextSize.describe("The window of a local worker model: a whole number above 4096, or auto."),
+    count: z.number().int().positive().optional().describe("Rollouts per batch. Verify's default is 3."),
+    tools: z.string().min(1).optional().describe("Comma-separated pi tools. Verify's default is read,grep,find,ls."),
+    deliverable: z.string().min(1).optional().describe("The deliverable file name. Verify's default is report.json."),
+    prompt: z.string().min(1).optional().describe("The worker prompt file. Default DIR/worker_prompt.md."),
+    only: z.array(z.string().min(1)).optional().describe("Batch names. Each becomes --only."),
+    timeout: z.number().int().positive().optional().describe("Seconds for one worker, passed as --timeout. Verify's default is 3600."),
+    max_parallel: z.number().int().positive().optional().describe("Workers at once. Default: count for a local model, the lane cap for Claude Code."),
+    env: z.literal("none").optional().describe("Execution environment. Claude Code workers need none."),
+    temperature: localModelShape.temperature,
+    thinking: z.string().min(1).optional().describe("Thinking level passed as --thinking."),
+    max_tokens: localModelShape.max_tokens,
+    timeout_seconds: z
+      .number()
+      .positive()
+      .optional()
+      .describe("Wall-clock timeout for this call, in seconds. Default 43200 (12 hours)."),
+  })
+  .strict();
+/** Arguments of the verify_workers tool, as `workersInput` parses them. */
+export type WorkersInput = z.infer<typeof workersInput>;
 
 export const listRunsInput = z
   .object({

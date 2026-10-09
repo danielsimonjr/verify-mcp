@@ -1,6 +1,10 @@
 import type { ServerContext } from "@modelcontextprotocol/server";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import {
+  batchArgv,
+  batchTimeoutSeconds,
   driverArgv,
   driverTimeoutSeconds,
   envDeriveArgv,
@@ -19,6 +23,8 @@ import {
   statusArgv,
   statusTimeoutSeconds,
   timeoutMs,
+  workersArgv,
+  workersTimeoutSeconds,
 } from "./argv.ts";
 import { applyDefaultProfile } from "./defaults.ts";
 import { VERIFY_SPEC, VERIFY_VERSION } from "./pin.ts";
@@ -26,6 +32,7 @@ import { VerifyNotInstalledError, resolveVerifyLaunch, type VerifyLaunch } from 
 import { ResultPathError, DEFAULT_MAX_BYTES, listRuns, readArtifact, resultBase } from "./results.ts";
 import { extractJson, runProcess, type RunRequest, type RunResult } from "./run.ts";
 import type {
+  BatchInput,
   DriverInput,
   EnvDeriveInput,
   GradeInput,
@@ -36,6 +43,7 @@ import type {
   RunnerInput,
   ScoreInput,
   StatusInput,
+  WorkersInput,
 } from "./schemas.ts";
 
 /** Spawns one process and returns its result. `defaultDeps` uses `runProcess`. */
@@ -178,6 +186,9 @@ async function invoke(
   args: string[],
   seconds: number,
   progress: ProgressCtx | undefined,
+  onLine: (line: string) => void = (line) => {
+    void progress?.notify(line);
+  },
 ): Promise<RunResult> {
   const heartbeat = progress
     ? setInterval(() => {
@@ -193,9 +204,7 @@ async function invoke(
       env: launch.env,
       timeoutMs: timeoutMs(seconds),
       signal: progress?.signal,
-      onLine: (line) => {
-        void progress?.notify(line);
-      },
+      onLine,
     });
     await progress?.notify(`veriharness ${command} finished`, true);
     return result;
@@ -343,6 +352,87 @@ export function handleEnvDerive(input: EnvDeriveInput, deps: Deps, progress?: Pr
       progress,
     );
     return finish("env-derive", result, false);
+  });
+}
+
+/**
+ * Runs `veriharness batch` and returns the parsed `OUT/manifest.json` as `manifest`.
+ *
+ * The manifest holds the budget, the window, the window source and the estimate of each batch.
+ * The default model profile applies only when the call sets no `batch_tokens`. Verify takes a
+ * budget or a model, not both.
+ */
+export function handleBatch(raw: BatchInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
+  const input = raw.batch_tokens === undefined ? applyDefaultProfile(raw, deps.env, false) : raw;
+  return withLaunch(deps, async (launch) => {
+    const result = await invoke(deps, launch, "batch", batchArgv(input), batchTimeoutSeconds(input), progress);
+    const outcome = finish("batch", result, false);
+    if (outcome.isError) return outcome;
+    // A relative --out resolves against the cwd of the veriharness process.
+    const path = resolve(launch.cwd ?? process.cwd(), input.out, "manifest.json");
+    try {
+      const manifest = JSON.parse(readFileSync(path, "utf8")) as unknown;
+      return { text: `${outcome.text}\nmanifest ${path}`, structured: { ...outcome.structured, manifestPath: path, manifest } };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { text: `${outcome.text}\nmanifest ${path} could not be read: ${message}`, structured: outcome.structured };
+    }
+  });
+}
+
+/** One parsed line of `veriharness workers` stdout: a rollout record or the summary. */
+function workersLine(line: string): Record<string, unknown> | undefined {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("{")) return undefined;
+  try {
+    return asRecord(JSON.parse(trimmed));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Runs `veriharness workers` and returns each rollout record and the summary.
+ *
+ * Each rollout record is one progress notice. The notice goes out at once, without the throttle.
+ * The structured content holds `rollouts` and `summary` (complete, errors, skipped). Exit 1 and
+ * exit 75 are error outcomes. They still carry the records. The default model profile applies.
+ */
+export function handleWorkers(raw: WorkersInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
+  const input = applyDefaultProfile(raw, deps.env, false);
+  return withLaunch(deps, async (launch) => {
+    const result = await invoke(deps, launch, "workers", workersArgv(input), workersTimeoutSeconds(input), progress, (line) => {
+      const record = workersLine(line);
+      void progress?.notify(line, record !== undefined && "rollout" in record);
+    });
+    const rollouts: Record<string, unknown>[] = [];
+    let summary: Record<string, unknown> | undefined;
+    for (const line of result.stdout.split("\n")) {
+      const record = workersLine(line);
+      if (record && "rollout" in record) rollouts.push(record);
+      else if (record && "summary" in record) summary = asRecord(record.summary);
+    }
+    const failed = result.code !== 0 || result.timedOut || result.aborted;
+    const counts = summary ? `complete ${summary.complete}, errors ${summary.errors}, skipped ${summary.skipped}` : "no summary";
+    const head =
+      result.code === 75
+        ? "veriharness workers stopped at a Claude Code usage limit (exit 75). Run it again after the limit resets; complete rollouts are skipped."
+        : failed
+          ? explain("workers", result)
+          : "veriharness workers finished.";
+    return {
+      text: `${head}\nrollouts ${rollouts.length}: ${counts}`,
+      ...(failed ? { isError: true } : {}),
+      structured: {
+        command: "workers",
+        exitCode: result.code,
+        durationMs: result.durationMs,
+        timedOut: result.timedOut,
+        aborted: result.aborted,
+        ...(summary ? { summary } : {}),
+        rollouts,
+      },
+    };
   });
 }
 

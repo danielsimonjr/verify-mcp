@@ -12,6 +12,10 @@ Open work for this repository. Check an item off when it lands, in the same comm
 
 - [x] Doc comments: `repo-tools docs check src` reported 63 exported symbols without a doc comment (argv.ts 19, handlers.ts 16, schemas.ts 11, resolve.ts 7, results.ts 6, run.ts 3, http.ts 1). It now passes with no MUST or SHOULD issue.
 
+## Batching and workers
+
+- [x] After verify ships `--context-size auto`, `veriharness batch` and `veriharness workers` (verify spec `docs/specs/batching-and-workers.md`): accept `context_size: "auto"` on the main model and each role, add the tools `verify_batch` and `verify_workers`, return the resolved window from `verify_model_check`, and bump the verify pin.
+
 ## Hosts
 
 - [ ] Codex installs the plugin from a clone and starts `bun ./src/index.ts`. Confirm that the clone has `node_modules`. If it does not, the Codex manifest needs the bundle, as the Claude Code plugin does.

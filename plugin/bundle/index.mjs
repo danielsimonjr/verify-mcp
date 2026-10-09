@@ -21848,6 +21848,10 @@ function originValidationResponse(req, allowedOriginHostnames) {
   });
 }
 
+// src/handlers.ts
+import { readFileSync } from "fs";
+import { resolve as resolve3 } from "path";
+
 // src/schemas.ts
 var BENCHES = ["apex", "wsb", "wb", "sb2", "jb"];
 var LANES = ["fable", "opus", "haiku", "sonnet"];
@@ -21860,12 +21864,13 @@ var CAP = `(?:${[...BENCHES, "default"].join("|")})=[1-9][0-9]*`;
 var CELL_CAP = new RegExp(`^${CAP}(?:,${CAP})*$`);
 var laneCap = number2().int().positive();
 var laneCaps = object(Object.fromEntries(LANES.map((lane) => [lane, laneCap.optional()]))).strict();
+var serverContextSize = union([number2().int().gt(4096, "context_size must be above 4096"), literal("auto")]).optional();
 var timeoutSeconds = number2().positive().optional().describe("Wall-clock timeout for this call, in seconds. Overrides the tool default.");
 var localModelShape = {
   provider: string2().min(1).optional().describe("Model provider. Local servers: ollama, or llamacpp (aliases llama.cpp and llama-cpp). Claude Code: " + "claude-code, which uses the login Claude Code holds, needs a full model id and env none."),
   model: string2().min(1).optional().describe("Model name. Required by verify for ollama and llamacpp. For claude-code, a full model id such as claude-haiku-4-5-20251001."),
   base_url: string2().min(1).optional().describe("Local server URL. Ollama defaults to http://127.0.0.1:11434, llama.cpp to http://127.0.0.1:8080."),
-  context_size: number2().int().positive().optional().describe("Context length passed as --context-size."),
+  context_size: union([number2().int().positive(), literal("auto")]).optional().describe("Context length passed as --context-size, or auto for the window the server reports (a loaded Ollama model, " + "then num_ctx, then llama.cpp's n_ctx). auto also overrides VERIHARNESS_CONTEXT_SIZE. Verify needs more than 4096."),
   temperature: number2().optional().describe("Sampling temperature passed as --temperature."),
   max_tokens: number2().int().positive().optional().describe("Max tokens passed as --max-tokens."),
   top_p: number2().optional().describe("Top-p passed as --top-p."),
@@ -21875,7 +21880,7 @@ var roleModel = object({
   provider: string2().trim().min(1).refine((s) => !s.includes(":"), "provider must not contain ':'").describe("Provider of this role: ollama, llamacpp, claude-code, or a pi provider."),
   model: string2().min(1).describe("Model of this role. For claude-code, a full model id. May contain colons."),
   base_url: string2().min(1).optional().describe("Server of a local (ollama or llamacpp) role, passed as --role-base-url."),
-  context_size: number2().int().positive().optional().describe("Context window of a local role, passed as --role-context-size. Verify needs more than 4096.")
+  context_size: serverContextSize.describe("Context window of a local role, passed as --role-context-size: a whole number above 4096, or auto for the " + "window the server reports.")
 }).strict();
 var rolesShape = object(Object.fromEntries(ROLES.map((role) => [role, roleModel.optional()]))).strict().optional().describe("A model for each role (checker, challenger, reviewer, fixer). A role left out uses provider and model; a fixer " + "left out uses the reviewer's model and continues its session. Any claude-code role needs env none.");
 var statusInput = object({ timeout_seconds: timeoutSeconds }).strict();
@@ -21965,6 +21970,49 @@ var envDeriveInput = object({
   jobs: number2().int().positive().optional().describe("Parallel docker builds. Verify's default is 8."),
   only: array(string2().min(1)).optional().describe("Base image names passed after --only."),
   timeout_seconds: timeoutSeconds
+}).strict();
+var SPLIT_RULE = /^(?:jsonl|blank-line|heading:.+)$/;
+var batchInput = object({
+  items: string2().min(1).describe("The items file to split."),
+  split: string2().regex(SPLIT_RULE, "split must be jsonl, blank-line or heading:REGEX").describe("How to split the items: jsonl (one item per line, id from its id field), blank-line (blocks between " + "blank lines), or heading:REGEX (an item starts at each matching line; the first capture group is the id)."),
+  spec: string2().min(1).describe("The task file. Each batch gets it as spec/task.md."),
+  out: string2().min(1).describe("The output folder. It must not exist or must be empty."),
+  shared: array(string2().min(1)).optional().describe("Files or folders every batch gets in workspace/. Each becomes --shared."),
+  prompt: string2().min(1).optional().describe("The worker prompt, copied to OUT/worker_prompt.md for verify_workers."),
+  items_name: string2().min(1).optional().describe("File name of the items in workspace/. Default items.jsonl or items.md."),
+  batch_tokens: number2().int().positive().optional().describe("The token budget of one batch. Give this or the worker model."),
+  provider: localModelShape.provider,
+  model: localModelShape.model,
+  base_url: localModelShape.base_url,
+  context_size: serverContextSize.describe("The worker model's window: a whole number above 4096, or auto. Omit for auto. The budget is half the window."),
+  chars_per_token: number2().positive().optional().describe("Characters per token in the estimate. Verify's default is 3.6."),
+  overhead_tokens: number2().int().nonnegative().optional().describe("Tokens each batch costs beyond its text. Verify's default is 2000."),
+  item_tokens: number2().int().nonnegative().optional().describe("Tokens of output each item adds. Verify's default is 0."),
+  max_items: number2().int().positive().optional().describe("Most items in one batch."),
+  timeout_seconds: timeoutSeconds
+}).strict().superRefine((input, ctx) => {
+  if (input.batch_tokens !== undefined && (input.provider !== undefined || input.model !== undefined)) {
+    ctx.addIssue({ code: "custom", path: ["batch_tokens"], message: "give batch_tokens or the worker model (provider and model), not both" });
+  }
+});
+var workersInput = object({
+  dir: string2().min(1).describe("A verify_batch output folder, or one task folder with spec/ and workspace/."),
+  provider: localModelShape.provider,
+  model: localModelShape.model,
+  base_url: localModelShape.base_url,
+  context_size: serverContextSize.describe("The window of a local worker model: a whole number above 4096, or auto."),
+  count: number2().int().positive().optional().describe("Rollouts per batch. Verify's default is 3."),
+  tools: string2().min(1).optional().describe("Comma-separated pi tools. Verify's default is read,grep,find,ls."),
+  deliverable: string2().min(1).optional().describe("The deliverable file name. Verify's default is report.json."),
+  prompt: string2().min(1).optional().describe("The worker prompt file. Default DIR/worker_prompt.md."),
+  only: array(string2().min(1)).optional().describe("Batch names. Each becomes --only."),
+  timeout: number2().int().positive().optional().describe("Seconds for one worker, passed as --timeout. Verify's default is 3600."),
+  max_parallel: number2().int().positive().optional().describe("Workers at once. Default: count for a local model, the lane cap for Claude Code."),
+  env: literal("none").optional().describe("Execution environment. Claude Code workers need none."),
+  temperature: localModelShape.temperature,
+  thinking: string2().min(1).optional().describe("Thinking level passed as --thinking."),
+  max_tokens: localModelShape.max_tokens,
+  timeout_seconds: number2().positive().optional().describe("Wall-clock timeout for this call, in seconds. Default 43200 (12 hours).")
 }).strict();
 var listRunsInput = object({
   run: string2().min(1).optional().describe("If set, return only this run directory name.")
@@ -22169,6 +22217,74 @@ function envDeriveArgv(input) {
 function envDeriveTimeoutSeconds(input) {
   return input.timeout_seconds ?? 60 * 60;
 }
+function batchArgv(input) {
+  const args = ["batch", "--items", input.items, "--split", input.split, "--spec", input.spec, "--out", input.out];
+  for (const path of input.shared ?? [])
+    args.push("--shared", path);
+  if (input.prompt)
+    args.push("--prompt", input.prompt);
+  if (input.items_name)
+    args.push("--items-name", input.items_name);
+  if (input.batch_tokens !== undefined)
+    args.push("--batch-tokens", String(input.batch_tokens));
+  if (input.provider)
+    args.push("--provider", input.provider);
+  if (input.model)
+    args.push("--model", input.model);
+  if (input.base_url)
+    args.push("--base-url", input.base_url);
+  if (input.context_size !== undefined)
+    args.push("--context-size", String(input.context_size));
+  if (input.chars_per_token !== undefined)
+    args.push("--chars-per-token", String(input.chars_per_token));
+  if (input.overhead_tokens !== undefined)
+    args.push("--overhead-tokens", String(input.overhead_tokens));
+  if (input.item_tokens !== undefined)
+    args.push("--item-tokens", String(input.item_tokens));
+  if (input.max_items !== undefined)
+    args.push("--max-items", String(input.max_items));
+  return args;
+}
+function batchTimeoutSeconds(input) {
+  return input.timeout_seconds ?? 10 * 60;
+}
+function workersArgv(input) {
+  const args = ["workers", input.dir];
+  if (input.provider)
+    args.push("--provider", input.provider);
+  if (input.model)
+    args.push("--model", input.model);
+  if (input.base_url)
+    args.push("--base-url", input.base_url);
+  if (input.context_size !== undefined)
+    args.push("--context-size", String(input.context_size));
+  if (input.count !== undefined)
+    args.push("--count", String(input.count));
+  if (input.tools)
+    args.push("--tools", input.tools);
+  if (input.deliverable)
+    args.push("--deliverable", input.deliverable);
+  if (input.prompt)
+    args.push("--prompt", input.prompt);
+  for (const name of input.only ?? [])
+    args.push("--only", name);
+  if (input.timeout !== undefined)
+    args.push("--timeout", String(input.timeout));
+  if (input.max_parallel !== undefined)
+    args.push("--max-parallel", String(input.max_parallel));
+  if (input.env)
+    args.push("--env", input.env);
+  if (input.temperature !== undefined)
+    args.push("--temperature", String(input.temperature));
+  if (input.thinking)
+    args.push("--thinking", input.thinking);
+  if (input.max_tokens !== undefined)
+    args.push("--max-tokens", String(input.max_tokens));
+  return args;
+}
+function workersTimeoutSeconds(input) {
+  return input.timeout_seconds ?? 12 * 60 * 60;
+}
 function parseHelpCommands(usage) {
   const names = [];
   for (const line of usage.split(`
@@ -22227,7 +22343,7 @@ function applyDefaultProfile(input, env, driver) {
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.4.0";
+var VERIFY_VERSION = "0.5.0";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -22778,7 +22894,9 @@ function finish(command, result, parse) {
     }
   };
 }
-async function invoke2(deps, launch, command, args, seconds, progress) {
+async function invoke2(deps, launch, command, args, seconds, progress, onLine = (line) => {
+  progress?.notify(line);
+}) {
   const heartbeat = progress ? setInterval(() => {
     progress.notify(`veriharness ${command} still running`);
   }, 15000) : undefined;
@@ -22791,9 +22909,7 @@ async function invoke2(deps, launch, command, args, seconds, progress) {
       env: launch.env,
       timeoutMs: timeoutMs(seconds),
       signal: progress?.signal,
-      onLine: (line) => {
-        progress?.notify(line);
-      }
+      onLine
     });
     await progress?.notify(`veriharness ${command} finished`, true);
     return result;
@@ -22897,6 +23013,71 @@ function handleEnvDerive(input, deps, progress) {
     return finish("env-derive", result, false);
   });
 }
+function handleBatch(raw, deps, progress) {
+  const input = raw.batch_tokens === undefined ? applyDefaultProfile(raw, deps.env, false) : raw;
+  return withLaunch(deps, async (launch) => {
+    const result = await invoke2(deps, launch, "batch", batchArgv(input), batchTimeoutSeconds(input), progress);
+    const outcome = finish("batch", result, false);
+    if (outcome.isError)
+      return outcome;
+    const path = resolve3(launch.cwd ?? process.cwd(), input.out, "manifest.json");
+    try {
+      const manifest = JSON.parse(readFileSync(path, "utf8"));
+      return { text: `${outcome.text}
+manifest ${path}`, structured: { ...outcome.structured, manifestPath: path, manifest } };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { text: `${outcome.text}
+manifest ${path} could not be read: ${message}`, structured: outcome.structured };
+    }
+  });
+}
+function workersLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("{"))
+    return;
+  try {
+    return asRecord(JSON.parse(trimmed));
+  } catch {
+    return;
+  }
+}
+function handleWorkers(raw, deps, progress) {
+  const input = applyDefaultProfile(raw, deps.env, false);
+  return withLaunch(deps, async (launch) => {
+    const result = await invoke2(deps, launch, "workers", workersArgv(input), workersTimeoutSeconds(input), progress, (line) => {
+      const record = workersLine(line);
+      progress?.notify(line, record !== undefined && "rollout" in record);
+    });
+    const rollouts = [];
+    let summary;
+    for (const line of result.stdout.split(`
+`)) {
+      const record = workersLine(line);
+      if (record && "rollout" in record)
+        rollouts.push(record);
+      else if (record && "summary" in record)
+        summary = asRecord(record.summary);
+    }
+    const failed = result.code !== 0 || result.timedOut || result.aborted;
+    const counts = summary ? `complete ${summary.complete}, errors ${summary.errors}, skipped ${summary.skipped}` : "no summary";
+    const head = result.code === 75 ? "veriharness workers stopped at a Claude Code usage limit (exit 75). Run it again after the limit resets; complete rollouts are skipped." : failed ? explain("workers", result) : "veriharness workers finished.";
+    return {
+      text: `${head}
+rollouts ${rollouts.length}: ${counts}`,
+      ...failed ? { isError: true } : {},
+      structured: {
+        command: "workers",
+        exitCode: result.code,
+        durationMs: result.durationMs,
+        timedOut: result.timedOut,
+        aborted: result.aborted,
+        ...summary ? { summary } : {},
+        rollouts
+      }
+    };
+  });
+}
 function handleListRuns(input, deps) {
   return withLaunch(deps, async (launch) => {
     try {
@@ -22950,7 +23131,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.8.0";
+var SERVER_VERSION = "0.9.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts
@@ -22994,6 +23175,18 @@ function createVerifyServer(deps = defaultDeps()) {
     inputSchema: runnerInput,
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
   }, async (args, ctx) => call(handleRunner(args, deps, progressFrom(ctx))));
+  server.registerTool("verify_batch", {
+    title: "Split items into batches",
+    description: "Run `veriharness batch`: split an items file into task folders that each fit a token budget. " + "Give batch_tokens, or the worker model (provider and model) to use half its window; context_size auto " + "uses the window the server reports. Returns manifest.json, with the window and its source.",
+    inputSchema: batchInput,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+  }, async (args, ctx) => call(handleBatch(args, deps, progressFrom(ctx))));
+  server.registerTool("verify_workers", {
+    title: "Run worker rollouts on batches",
+    description: "Run `veriharness workers`: N worker rollouts on each batch of a verify_batch folder, each in its own " + "temp copy. A second call skips complete rollouts. Each finished rollout is one progress notice. " + "Claude Code workers need env none. Default wall clock is 12 hours.",
+    inputSchema: workersInput,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+  }, async (args, ctx) => call(handleWorkers(args, deps, progressFrom(ctx))));
   server.registerTool("verify_score", {
     title: "Score a cell",
     description: "Run `veriharness score` on a cell directory. Passes --json unless json is false, " + "and returns the trailing JSON summary as structured content.",

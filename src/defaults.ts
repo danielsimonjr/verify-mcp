@@ -18,7 +18,7 @@ export interface ProfileFields {
   provider?: string;
   model?: string;
   base_url?: string;
-  context_size?: number;
+  context_size?: number | "auto";
   env?: (typeof ENVS)[number];
   thinking?: string;
   max_tokens?: number;
@@ -44,8 +44,8 @@ function positive(value: string | undefined): number | undefined {
  * holds both. A call that names either one is returned unchanged, so a Claude Code call never
  * inherits an Ollama URL. `driver` adds the fields only `verify_driver` has: `VERIFY_MCP_ENV`,
  * `VERIFY_MCP_THINKING` and `VERIFY_MCP_NUDGE_TIMEOUT`. A context size or token count that is not a
- * positive integer, a timeout that is not a positive number, and an env that is not in `ENVS`, are
- * ignored.
+ * positive integer is ignored. A timeout that is not a positive number is ignored. An env that is
+ * not in `ENVS` is ignored.
  */
 export function applyDefaultProfile<T extends ProfileFields>(
   input: T,

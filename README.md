@@ -4,7 +4,7 @@ An MCP server for [verify](https://github.com/danielsimonjr/verify), the VeriHar
 harness. It lets an agent in Claude Code, Codex or Cursor verify a task, run a benchmark, and read
 the results through ten tools.
 
-verify-mcp is version 0.8.0. It is not published to npm or to a public plugin marketplace. Install it
+verify-mcp is version 0.9.0. It is not published to npm or to a public plugin marketplace. Install it
 from this repository.
 
 ## Contents
@@ -50,7 +50,7 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.4.0
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.5.0
   (`@danielsimonjr/verify`, the pinned version) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
@@ -200,6 +200,8 @@ that the native environments use.
 | `verify_model_check` | `model-check` | Probes Ollama, llama.cpp or Claude Code. Needs `provider` and `model` |
 | `verify_driver` | `driver <task_dir>` | Verifies one task. The directory must contain `rollouts/` |
 | `verify_runner` | `runner --cells bench:pool --run-name NAME` | Verifies the tasks of one or more cells under `VERIHARNESS_RUNS/<run>/` |
+| `verify_batch` | `batch --items FILE --split RULE --spec FILE --out DIR` | Splits an items file into task folders that each fit a token budget. Returns `manifest.json` |
+| `verify_workers` | `workers <dir>` | Runs N worker rollouts on each batch, each in a temp copy. A second call skips complete rollouts |
 | `verify_score` | `score <cell_dir> --json` | Scores a cell. Set `json` to false to get text only |
 | `verify_grade` | `grade <bench> <task_key> <deliverables_dir>` | Grades one deliverables directory |
 | `verify_materialize` | `materialize <bench>` | Builds task workspaces from the benchmark archive |
@@ -259,12 +261,41 @@ A runner call for one cell on Haiku:
 verify's [Claude Code design document](https://github.com/danielsimonjr/verify/blob/main/docs/claude-code.md)
 gives the flags that each turn uses and what they do not isolate.
 
+### Context size, batches and workers
+
+`context_size` on the main model takes a number or `"auto"`. On a role, on `verify_batch` and on
+`verify_workers`, it takes `"auto"` or a whole number above 4096. `"auto"` uses the window that the
+server reports: a loaded Ollama model, then `num_ctx`, then llama.cpp's `n_ctx`. It also overrides
+`VERIHARNESS_CONTEXT_SIZE`. `verify_model_check` returns the window as `window` and its source as
+`windowSource`.
+
+`verify_batch` splits an items file into task folders. Each folder fits a token budget:
+`batch_tokens`, or half the window of the worker model (`provider` and `model`). Give one of the
+two, not both. `split` is `jsonl`, `blank-line` or `heading:REGEX`. The result holds
+`manifest.json`: the budget, the window and its source, and the estimate of each batch. The
+default model profile applies when the call sets no `batch_tokens`.
+
+`verify_workers` runs `count` rollouts (default 3) on each batch of that folder. Each rollout runs
+in a temp copy, and its record goes to `rollouts/<rollout>/trajectory/worker.json`. A local model
+runs one batch at a time; Claude Code runs up to the lane cap and needs `env: "none"`. Each
+finished rollout is one progress notice. The result holds `rollouts` and `summary`. A rollout
+with an error makes the call an error, and the records are still returned. A Claude Code usage
+limit stops the run (exit 75); call again after the limit resets, and the complete rollouts are
+skipped. verify's [batching guide](https://github.com/danielsimonjr/verify/blob/main/docs/batching.md)
+has a worked example.
+
+```json
+{ "items": "TODO-closed.md", "split": "heading:^### TODO line (\\d+)$", "spec": "task.md",
+  "shared": ["CHANGELOG.md"], "prompt": "worker_prompt.md", "out": "work",
+  "provider": "ollama", "model": "qwen3.5:9b-64k", "context_size": "auto" }
+```
+
 ### A model for each role
 
 `roles` on `verify_driver` and `verify_runner` gives a verifier role its own provider and model.
 The roles are `checker`, `challenger`, `reviewer` and `fixer`. Each entry needs `provider` and
 `model`. A local (`ollama` or `llamacpp`) entry can also set `base_url` and `context_size`.
-The field needs verify 0.4.0 or later.
+The field needs verify 0.4.0 or later. `context_size: "auto"` needs verify 0.5.0.
 
 - A role left out uses `provider` and `model`, or the runner lane.
 - A `fixer` left out uses the reviewer's model and continues its session. A fixer on another
@@ -307,8 +338,8 @@ the session rules and the local-server warning.
 - Each `cell_cap` entry must be `key=N`, where `key` is a bench or `default` and `N` is 1 or more.
   verify accepts a cap of 0, and its scheduler then never starts the cell's tasks.
 
-`verify_driver`, `verify_runner`, `verify_score` and `verify_materialize` carry
-`destructiveHint: true`, because they overwrite or delete files under the task or runs directory.
+`verify_driver`, `verify_runner`, `verify_score`, `verify_materialize` and `verify_workers` carry
+`destructiveHint: true`, because they overwrite or delete files under the task, batch or runs directory.
 
 `verify_read_result` reads at most `max_bytes` of a text artifact (default 262144, maximum
 2000000). It refuses a path with `..`, and a symbolic link that leaves the runs directory or the
@@ -330,6 +361,8 @@ characters of stdout and of stderr.
 | `verify_score` | 2 hours |
 | `verify_grade` | 30 minutes |
 | `verify_materialize`, `verify_env_derive` | 1 hour |
+| `verify_batch` | 10 minutes |
+| `verify_workers` | 12 hours |
 
 `timeout_seconds` overrides the default for one call.
 

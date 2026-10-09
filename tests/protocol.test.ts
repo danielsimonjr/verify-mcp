@@ -56,7 +56,7 @@ describe("MCP protocol", () => {
       // the driver rewrites MISSION.md and finish.json, the runner and materialize remove existing
       // task workspaces, and score replaces scores.json.
       const destructive = listed.tools.filter((tool) => tool.annotations?.destructiveHint).map((tool) => tool.name);
-      expect(destructive.sort()).toEqual(["verify_driver", "verify_materialize", "verify_runner", "verify_score"]);
+      expect(destructive.sort()).toEqual(["verify_driver", "verify_materialize", "verify_runner", "verify_score", "verify_workers"]);
 
       // A client builds its call from this schema: lane_max must name each lane and allow no other key.
       const runner = listed.tools.find((tool) => tool.name === "verify_runner");

@@ -6,6 +6,16 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-09
+
+### Added
+- `verify_batch`: runs `veriharness batch`. It splits an items file (`jsonl`, `blank-line` or `heading:REGEX`) into task folders that each fit a token budget, `batch_tokens` or half the worker model's window. The result holds the parsed `manifest.json`. The default model profile applies when the call sets no `batch_tokens`.
+- `verify_workers`: runs `veriharness workers`, N worker rollouts on each batch. Each finished rollout is one progress notice, sent at once. The result holds `rollouts` and `summary`; exit 1 and exit 75 (a usage limit) are errors that still carry the records. Default timeout 12 hours.
+- `context_size: "auto"` on the main model and on each role. A role, `verify_batch` and `verify_workers` take `"auto"` or a whole number above 4096, as verify does. `verify_model_check` returns `window` and `windowSource` from verify.
+
+### Changed
+- Pin verify 0.5.0, which adds `--context-size auto`, `batch` and `workers`.
+
 ## [0.8.0] - 2026-10-09
 
 ### Added

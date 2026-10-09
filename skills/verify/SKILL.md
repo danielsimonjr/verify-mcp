@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Run danielsimonjr/verify (the veriharness CLI) through the verify MCP server. Use when the user wants to drive a task, batch-run cells, score or grade, probe a local Ollama or llama.cpp server or Claude Code, run the verifier on Claude Haiku or Sonnet, or read run ledgers and scores.
+description: Run danielsimonjr/verify (the veriharness CLI) through the verify MCP server. Use when the user wants to drive a task, batch-run cells, score or grade, split a large check into batches and run worker rollouts on them, probe a local Ollama or llama.cpp server or Claude Code, run the verifier on Claude Haiku or Sonnet, or read run ledgers and scores.
 ---
 
 # verify
@@ -12,7 +12,8 @@ The `verify` MCP server wraps `veriharness`. Call tools in this order when you a
 3. `verify_driver` runs one task workspace. The directory must contain `rollouts/`. For Claude Code, pass `provider: "claude-code"`, the full model id and `env: "none"`.
 4. `verify_runner` batch-runs cells named `bench:pool` under a run name. Lanes are `fable`, `opus`, `haiku` and `sonnet`; the archived `flash` pools run on the `fable` lane. All four lanes run Claude Code and need `env: "none"`. Their default caps are 2 tasks at a time for `fable` and `opus` and 4 for `haiku` and `sonnet`; `lane_max` changes a cap.
    `roles` on `verify_driver` and `verify_runner` gives `checker`, `challenger`, `reviewer` or `fixer` its own `{provider, model}` (and `base_url`, `context_size` for a local role). A role left out uses the main model; a fixer left out follows the reviewer.
-5. `verify_score` scores a cell directory. `verify_grade` grades one deliverables directory.
-6. `verify_list_runs` and `verify_read_result` list runs and read fixed artifacts (`ledger_elim`, `ledger_fals`, `finish`, `repair`, `driver_log`, `run`, `scores`, `scores_partial`, `deliverables`). Deliverables are names and sizes only.
+5. `verify_batch` splits a large items file into task folders that fit a token budget: `batch_tokens`, or the worker model (`provider`, `model`, `context_size: "auto"`) to use half its window. `verify_workers` then runs `count` worker rollouts on each batch; a second call skips complete rollouts. Run `verify_driver` on each batch folder to check the rollouts. `context_size: "auto"` (on any model or role) uses the window the server reports, and `verify_model_check` returns it as `window` and `windowSource`.
+6. `verify_score` scores a cell directory. `verify_grade` grades one deliverables directory.
+7. `verify_list_runs` and `verify_read_result` list runs and read fixed artifacts (`ledger_elim`, `ledger_fals`, `finish`, `repair`, `driver_log`, `run`, `scores`, `scores_partial`, `deliverables`). Deliverables are names and sizes only.
 
 Benches are `apex`, `wsb`, `wb`, `sb2`, and `jb`. Omit optional flags so verify keeps its own defaults. Long tools emit progress and stop at their timeout. If the local model server is down, the tool error says so.

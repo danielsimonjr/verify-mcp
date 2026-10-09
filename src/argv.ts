@@ -1,6 +1,7 @@
 import {
   LANES,
   ROLES,
+  type BatchInput,
   type DriverInput,
   type EnvDeriveInput,
   type GradeInput,
@@ -8,6 +9,7 @@ import {
   type ModelCheckInput,
   type RunnerInput,
   type ScoreInput,
+  type WorkersInput,
 } from "./schemas.ts";
 
 /** Local model fields that `appendLocalModel` turns into veriharness flags. */
@@ -15,7 +17,7 @@ export interface LocalFlags {
   provider?: string;
   model?: string;
   base_url?: string;
-  context_size?: number;
+  context_size?: number | "auto";
   temperature?: number;
   max_tokens?: number;
   top_p?: number;
@@ -211,6 +213,59 @@ export function envDeriveArgv(input: EnvDeriveInput): string[] {
 /** Returns `timeout_seconds`, or the default of 1 hour (3600 seconds). */
 export function envDeriveTimeoutSeconds(input: EnvDeriveInput): number {
   return input.timeout_seconds ?? 60 * 60;
+}
+
+/**
+ * Builds `batch` with the four required options, then one flag for each option that `input` sets.
+ *
+ * `shared` adds one `--shared` flag per path.
+ */
+export function batchArgv(input: BatchInput): string[] {
+  const args = ["batch", "--items", input.items, "--split", input.split, "--spec", input.spec, "--out", input.out];
+  for (const path of input.shared ?? []) args.push("--shared", path);
+  if (input.prompt) args.push("--prompt", input.prompt);
+  if (input.items_name) args.push("--items-name", input.items_name);
+  if (input.batch_tokens !== undefined) args.push("--batch-tokens", String(input.batch_tokens));
+  if (input.provider) args.push("--provider", input.provider);
+  if (input.model) args.push("--model", input.model);
+  if (input.base_url) args.push("--base-url", input.base_url);
+  if (input.context_size !== undefined) args.push("--context-size", String(input.context_size));
+  if (input.chars_per_token !== undefined) args.push("--chars-per-token", String(input.chars_per_token));
+  if (input.overhead_tokens !== undefined) args.push("--overhead-tokens", String(input.overhead_tokens));
+  if (input.item_tokens !== undefined) args.push("--item-tokens", String(input.item_tokens));
+  if (input.max_items !== undefined) args.push("--max-items", String(input.max_items));
+  return args;
+}
+
+/** Returns `timeout_seconds`, or the default of 10 minutes (600 seconds). */
+export function batchTimeoutSeconds(input: BatchInput): number {
+  return input.timeout_seconds ?? 10 * 60;
+}
+
+/** Builds `workers <dir>` and one flag for each option that `input` sets. `only` adds one `--only` flag per name. */
+export function workersArgv(input: WorkersInput): string[] {
+  const args = ["workers", input.dir];
+  if (input.provider) args.push("--provider", input.provider);
+  if (input.model) args.push("--model", input.model);
+  if (input.base_url) args.push("--base-url", input.base_url);
+  if (input.context_size !== undefined) args.push("--context-size", String(input.context_size));
+  if (input.count !== undefined) args.push("--count", String(input.count));
+  if (input.tools) args.push("--tools", input.tools);
+  if (input.deliverable) args.push("--deliverable", input.deliverable);
+  if (input.prompt) args.push("--prompt", input.prompt);
+  for (const name of input.only ?? []) args.push("--only", name);
+  if (input.timeout !== undefined) args.push("--timeout", String(input.timeout));
+  if (input.max_parallel !== undefined) args.push("--max-parallel", String(input.max_parallel));
+  if (input.env) args.push("--env", input.env);
+  if (input.temperature !== undefined) args.push("--temperature", String(input.temperature));
+  if (input.thinking) args.push("--thinking", input.thinking);
+  if (input.max_tokens !== undefined) args.push("--max-tokens", String(input.max_tokens));
+  return args;
+}
+
+/** Returns `timeout_seconds`, or the default of 12 hours (43200 seconds): a large run takes hours. */
+export function workersTimeoutSeconds(input: WorkersInput): number {
+  return input.timeout_seconds ?? 12 * 60 * 60;
 }
 
 /** Command names from `veriharness --help`, which prints the usage block to stderr. */
