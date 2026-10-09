@@ -4,7 +4,7 @@ An MCP server for [verify](https://github.com/danielsimonjr/verify), the VeriHar
 harness. It lets an agent in Claude Code, Codex or Cursor verify a task, run a benchmark, and read
 the results through ten tools.
 
-verify-mcp is version 0.7.0. It is not published to npm or to a public plugin marketplace. Install it
+verify-mcp is version 0.8.0. It is not published to npm or to a public plugin marketplace. Install it
 from this repository.
 
 ## Contents
@@ -50,7 +50,7 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.3.0
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.4.0
   (`@danielsimonjr/verify`, the pinned version) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
@@ -259,6 +259,37 @@ A runner call for one cell on Haiku:
 verify's [Claude Code design document](https://github.com/danielsimonjr/verify/blob/main/docs/claude-code.md)
 gives the flags that each turn uses and what they do not isolate.
 
+### A model for each role
+
+`roles` on `verify_driver` and `verify_runner` gives a verifier role its own provider and model.
+The roles are `checker`, `challenger`, `reviewer` and `fixer`. Each entry needs `provider` and
+`model`. A local (`ollama` or `llamacpp`) entry can also set `base_url` and `context_size`.
+The field needs verify 0.4.0 or later.
+
+- A role left out uses `provider` and `model`, or the runner lane.
+- A `fixer` left out uses the reviewer's model and continues its session. A fixer on another
+  model starts a new session.
+- Any `claude-code` role needs `env: "none"`.
+- verify refuses `base_url` or `context_size` on a role that is not local.
+
+A local Checker and Challenger with Claude Opus 5.5 as the Reviewer and the Fixer:
+
+```json
+{
+  "task_dir": "C:/runs/demo/sb2_haiku/t1",
+  "provider": "claude-code",
+  "model": "claude-opus-5-5",
+  "env": "none",
+  "roles": {
+    "checker": { "provider": "ollama", "model": "qwen3.5:9b" },
+    "challenger": { "provider": "ollama", "model": "qwen3.5:9b" }
+  }
+}
+```
+
+verify's [roles document](https://github.com/danielsimonjr/verify/blob/main/docs/roles.md) gives
+the session rules and the local-server warning.
+
 ### Input checks
 
 `verify_runner` refuses input that verify would act on unsafely:
@@ -270,6 +301,9 @@ gives the flags that each turn uses and what they do not isolate.
   value must be 1 or more.
 - The `fable` and `opus` caps are set once: with `max_fable` or `max_opus`, or in `lane_max`.
   verify applies `lane_max` over the other two, so a second value would be dropped.
+- `roles` takes only the keys `checker`, `challenger`, `reviewer` and `fixer`, and each entry
+  needs `provider` and `model`. A `provider` must not contain `:`, because verify splits
+  `PROVIDER:MODEL` on the first colon.
 - Each `cell_cap` entry must be `key=N`, where `key` is a bench or `default` and `N` is 1 or more.
   verify accepts a cap of 0, and its scheduler then never starts the cell's tasks.
 

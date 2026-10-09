@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-09
+
+### Added
+- `roles` on `verify_driver` and `verify_runner`: a strict object keyed by `checker`, `challenger`, `reviewer` and `fixer`. Each entry is `{provider, model, base_url?, context_size?}` and becomes `--role ROLE=PROVIDER:MODEL`, plus `--role-base-url` and `--role-context-size` for a local role. README section "A model for each role"; the skill names the field.
+
+### Changed
+- Pin verify 0.4.0, which adds the role options. `tests/roles.test.ts` keeps `ROLES` equal to the pinned `harness/roles.ts`.
+
 ## [0.7.0] - 2026-10-09
 
 ### Changed

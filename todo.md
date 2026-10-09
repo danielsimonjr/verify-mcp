@@ -31,3 +31,4 @@ Open work for this repository. Check an item off when it lands, in the same comm
 - [x] Haiku and sonnet lane caps default to 4 when the cells use the lane and the call names no cap (0.5.1)
 - [x] All four lanes run Claude Code (verify 0.2.0): pin verify 0.2.0, drop the wrapper cap default, say that every lane needs env none (0.6.0)
 - [x] The flash lane is renamed fable (verify 0.3.0): LANES, max_flash -> max_fable, lane_max key, docs, pin (0.7.0)
+- [x] A model for each role (verify 0.4.0): a `roles` field on verify_driver and verify_runner ({provider, model, base_url, context_size} per role), argv, docs, skill, pin (0.8.0)

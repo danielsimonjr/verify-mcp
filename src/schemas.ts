@@ -3,6 +3,8 @@ import * as z from "zod";
 export const BENCHES = ["apex", "wsb", "wb", "sb2", "jb"] as const;
 /** Lane names in the pinned runner's config.LANES. tests/schemas.test.ts keeps both lists equal to the pin. */
 export const LANES = ["fable", "opus", "haiku", "sonnet"] as const;
+/** The verifier roles in the pinned harness/roles.ts, in phase order. tests/roles.test.ts keeps the list equal to the pin. */
+export const ROLES = ["checker", "challenger", "reviewer", "fixer"] as const;
 /** The driver's execution environments. Provider claude-code and every lane need `none`. */
 export const ENVS = ["jail", "none", "native", "native-full"] as const;
 
@@ -60,6 +62,36 @@ export const localModelShape = {
     .describe("Per-request timeout in seconds, passed as --request-timeout. Verify's own default is 180."),
 };
 
+const roleModel = z
+  .object({
+    // verify splits PROVIDER:MODEL on the first colon, so a colon in the provider would move into the model.
+    provider: z
+      .string()
+      .trim()
+      .min(1)
+      .refine((s) => !s.includes(":"), "provider must not contain ':'")
+      .describe("Provider of this role: ollama, llamacpp, claude-code, or a pi provider."),
+    model: z.string().min(1).describe("Model of this role. For claude-code, a full model id. May contain colons."),
+    base_url: z.string().min(1).optional().describe("Server of a local (ollama or llamacpp) role, passed as --role-base-url."),
+    context_size: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe("Context window of a local role, passed as --role-context-size. Verify needs more than 4096."),
+  })
+  .strict();
+
+// A strict object, not a record, for the same reason as the lane caps.
+const rolesShape = z
+  .object(Object.fromEntries(ROLES.map((role) => [role, roleModel.optional()])) as Record<(typeof ROLES)[number], z.ZodOptional<typeof roleModel>>)
+  .strict()
+  .optional()
+  .describe(
+    "A model for each role (checker, challenger, reviewer, fixer). A role left out uses provider and model; a fixer " +
+      "left out uses the reviewer's model and continues its session. Any claude-code role needs env none.",
+  );
+
 export const statusInput = z.object({ timeout_seconds: timeoutSeconds }).strict();
 /** Arguments of the verify_status tool, as `statusInput` parses them. */
 export type StatusInput = z.infer<typeof statusInput>;
@@ -105,6 +137,7 @@ export const driverInput = z
     task_timeout: z.number().positive().optional().describe("Seconds, passed as --task-timeout. Verify's default is 3600."),
     timeout_seconds: timeoutSeconds,
     ...localModelShape,
+    roles: rolesShape,
   })
   .strict();
 /** Arguments of the verify_driver tool, as `driverInput` parses them. */
@@ -167,6 +200,7 @@ export const runnerInput = z
     driver_arg: z.array(z.string()).optional().describe("Extra driver arguments. Each becomes --driver-arg."),
     timeout_seconds: timeoutSeconds,
     ...localModelShape,
+    roles: rolesShape,
   })
   .strict()
   // The pinned runner applies --max-fable and --max-opus, then --lane-max over them, so a second value

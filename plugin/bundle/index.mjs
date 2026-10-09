@@ -21851,6 +21851,7 @@ function originValidationResponse(req, allowedOriginHostnames) {
 // src/schemas.ts
 var BENCHES = ["apex", "wsb", "wb", "sb2", "jb"];
 var LANES = ["fable", "opus", "haiku", "sonnet"];
+var ROLES = ["checker", "challenger", "reviewer", "fixer"];
 var ENVS = ["jail", "none", "native", "native-full"];
 var SEGMENT = "[A-Za-z0-9][A-Za-z0-9._-]*";
 var SEGMENT_HELP = "letters, digits, dot, underscore and hyphen, not starting with a dot";
@@ -21870,6 +21871,13 @@ var localModelShape = {
   top_p: number2().optional().describe("Top-p passed as --top-p."),
   request_timeout: number2().positive().optional().describe("Per-request timeout in seconds, passed as --request-timeout. Verify's own default is 180.")
 };
+var roleModel = object({
+  provider: string2().trim().min(1).refine((s) => !s.includes(":"), "provider must not contain ':'").describe("Provider of this role: ollama, llamacpp, claude-code, or a pi provider."),
+  model: string2().min(1).describe("Model of this role. For claude-code, a full model id. May contain colons."),
+  base_url: string2().min(1).optional().describe("Server of a local (ollama or llamacpp) role, passed as --role-base-url."),
+  context_size: number2().int().positive().optional().describe("Context window of a local role, passed as --role-context-size. Verify needs more than 4096.")
+}).strict();
+var rolesShape = object(Object.fromEntries(ROLES.map((role) => [role, roleModel.optional()]))).strict().optional().describe("A model for each role (checker, challenger, reviewer, fixer). A role left out uses provider and model; a fixer " + "left out uses the reviewer's model and continues its session. Any claude-code role needs env none.");
 var statusInput = object({ timeout_seconds: timeoutSeconds }).strict();
 var modelCheckInput = object({
   provider: string2().min(1).optional().describe("Provider to probe: ollama, llamacpp (aliases llama.cpp and llama-cpp), or claude-code. For claude-code the " + "check runs one isolated turn with the login Claude Code holds and reports the CLI version. " + "Omit provider and model to probe the server's default model."),
@@ -21894,7 +21902,8 @@ var driverInput = object({
   nudge_timeout: number2().positive().optional().describe("Seconds, passed as --nudge-timeout. Verify's default is 600."),
   task_timeout: number2().positive().optional().describe("Seconds, passed as --task-timeout. Verify's default is 3600."),
   timeout_seconds: timeoutSeconds,
-  ...localModelShape
+  ...localModelShape,
+  roles: rolesShape
 }).strict();
 var runnerInput = object({
   cells: array(string2().regex(CELL, `cell must be bench:pool, bench one of ${BENCHES.join(", ")}, pool ${SEGMENT_HELP}`)).min(1).describe("Cells to run. Each entry is bench:pool, for example wb:flash."),
@@ -21920,7 +21929,8 @@ var runnerInput = object({
   skills_mode: _enum(["mounted", "auto"]).optional(),
   driver_arg: array(string2()).optional().describe("Extra driver arguments. Each becomes --driver-arg."),
   timeout_seconds: timeoutSeconds,
-  ...localModelShape
+  ...localModelShape,
+  roles: rolesShape
 }).strict().superRefine((input, ctx) => {
   for (const [alias, lane] of [["max_fable", "fable"], ["max_opus", "opus"]]) {
     if (input[alias] !== undefined && input.lane_max?.[lane] !== undefined) {
@@ -22000,6 +22010,18 @@ function appendLocalModel(args, input) {
   if (input.request_timeout !== undefined)
     args.push("--request-timeout", String(input.request_timeout));
 }
+function appendRoles(args, roles) {
+  for (const role of ROLES) {
+    const m = roles?.[role];
+    if (!m)
+      continue;
+    args.push("--role", `${role}=${m.provider}:${m.model}`);
+    if (m.base_url)
+      args.push("--role-base-url", `${role}=${m.base_url}`);
+    if (m.context_size !== undefined)
+      args.push("--role-context-size", `${role}=${m.context_size}`);
+  }
+}
 function pushSkills(args, skill, noSkills, mode) {
   for (const name of skill ?? [])
     args.push("--skill", name);
@@ -22040,6 +22062,7 @@ function driverArgv(input) {
   if (input.task_timeout !== undefined)
     args.push("--task-timeout", String(input.task_timeout));
   appendLocalModel(args, input);
+  appendRoles(args, input.roles);
   return args;
 }
 function driverTimeoutSeconds(input) {
@@ -22090,6 +22113,7 @@ function runnerArgv(input) {
   for (const extra of input.driver_arg ?? [])
     args.push("--driver-arg", extra);
   appendLocalModel(args, input);
+  appendRoles(args, input.roles);
   return args;
 }
 function runnerTimeoutSeconds(input) {
@@ -22203,7 +22227,7 @@ function applyDefaultProfile(input, env, driver) {
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.3.0";
+var VERIFY_VERSION = "0.4.0";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -22926,7 +22950,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.7.0";
+var SERVER_VERSION = "0.8.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts

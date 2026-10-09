@@ -1,5 +1,6 @@
 import {
   LANES,
+  ROLES,
   type DriverInput,
   type EnvDeriveInput,
   type GradeInput,
@@ -43,6 +44,17 @@ export function appendLocalModel(args: string[], input: LocalFlags): void {
   if (input.request_timeout !== undefined) args.push("--request-timeout", String(input.request_timeout));
 }
 
+/** One `--role ROLE=PROVIDER:MODEL` per role in ROLES order, each followed by its local server options. */
+export function appendRoles(args: string[], roles: DriverInput["roles"]): void {
+  for (const role of ROLES) {
+    const m = roles?.[role];
+    if (!m) continue;
+    args.push("--role", `${role}=${m.provider}:${m.model}`);
+    if (m.base_url) args.push("--role-base-url", `${role}=${m.base_url}`);
+    if (m.context_size !== undefined) args.push("--role-context-size", `${role}=${m.context_size}`);
+  }
+}
+
 function pushSkills(args: string[], skill: string[] | undefined, noSkills: boolean | undefined, mode: string | undefined): void {
   for (const name of skill ?? []) args.push("--skill", name);
   if (noSkills) args.push("--no-skills");
@@ -79,7 +91,7 @@ export function modelCheckTimeoutSeconds(input: ModelCheckInput): number {
 /**
  * Builds `driver <task_dir>` and one flag for each option that `input` sets.
  *
- * `skill` adds one `--skill` flag per name. The local model flags come last.
+ * `skill` adds one `--skill` flag per name. The local model flags, then the role flags, come last.
  */
 export function driverArgv(input: DriverInput): string[] {
   const args = ["driver", input.task_dir];
@@ -91,6 +103,7 @@ export function driverArgv(input: DriverInput): string[] {
   if (input.nudge_timeout !== undefined) args.push("--nudge-timeout", String(input.nudge_timeout));
   if (input.task_timeout !== undefined) args.push("--task-timeout", String(input.task_timeout));
   appendLocalModel(args, input);
+  appendRoles(args, input.roles);
   return args;
 }
 
@@ -108,7 +121,8 @@ export function driverTimeoutSeconds(input: DriverInput): number {
  * Builds `runner --run-name <run_name>` and one `--cells` flag per cell.
  *
  * Each option that `input` sets adds a flag. `only`, `skill` and `driver_arg` add one flag per
- * entry, and `lane_max` one `--lane-max LANE=N` per lane, in LANES order. The local model flags come last.
+ * entry, and `lane_max` one `--lane-max LANE=N` per lane, in LANES order. The local model flags, then the
+ * role flags, come last.
  */
 export function runnerArgv(input: RunnerInput): string[] {
   const args = ["runner", "--run-name", input.run_name];
@@ -135,6 +149,7 @@ export function runnerArgv(input: RunnerInput): string[] {
   pushSkills(args, input.skill, input.no_skills, input.skills_mode);
   for (const extra of input.driver_arg ?? []) args.push("--driver-arg", extra);
   appendLocalModel(args, input);
+  appendRoles(args, input.roles);
   return args;
 }
 
