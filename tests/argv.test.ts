@@ -112,6 +112,21 @@ describe("argv", () => {
     ]);
   });
 
+  test("runner raises the cap of a Claude Code lane in use to 4 when the call sets none", () => {
+    const base: RunnerInput = { cells: ["wb:sonnet", "wb:haiku", "wb:flash"], run_name: "cc", env: "none" };
+    expect(runnerArgv(base)).toEqual([
+      "runner", "--run-name", "cc",
+      "--cells", "wb:sonnet", "--cells", "wb:haiku", "--cells", "wb:flash",
+      "--lane-max", "haiku=4", "--lane-max", "sonnet=4",
+      "--env", "none",
+    ]);
+    // a cap the call sets wins; a lane the cells do not use gets no flag
+    expect(runnerArgv({ cells: ["wb:sonnet"], run_name: "cc", lane_max: { sonnet: 1 } })).toEqual([
+      "runner", "--run-name", "cc", "--cells", "wb:sonnet", "--lane-max", "sonnet=1",
+    ]);
+    expect(runnerArgv({ cells: ["wb:sonnet"], run_name: "cc" })).not.toContain("haiku=4");
+  });
+
   test("model-check passes claude-code with its model id", () => {
     expect(modelCheckArgv({ provider: "claude-code", model: "claude-haiku-4-5-20251001" })).toEqual([
       "model-check",

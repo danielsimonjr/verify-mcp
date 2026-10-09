@@ -4,7 +4,7 @@ An MCP server for [verify](https://github.com/danielsimonjr/verify), the VeriHar
 harness. It lets an agent in Claude Code, Codex or Cursor verify a task, run a benchmark, and read
 the results through ten tools.
 
-verify-mcp is version 0.5.0. It is not published to npm or to a public plugin marketplace. Install it
+verify-mcp is version 0.5.1. It is not published to npm or to a public plugin marketplace. Install it
 from this repository.
 
 ## Contents

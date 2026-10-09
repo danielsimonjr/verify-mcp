@@ -131,7 +131,8 @@ export const runnerInput = z
       .optional()
       .describe(
         "In-flight cap per lane, each passed as --lane-max LANE=N. Verify's defaults: flash 25, opus 45, haiku 2, " +
-          "sonnet 2. The Claude Code lanes start low because the subscription's usage limit is shared with the " +
+          "sonnet 2. This server raises haiku and sonnet to 4 when the cells use that lane and this field omits it. " +
+          "The Claude Code lanes stay low because the subscription's usage limit is shared with the " +
           "account's other Claude Code sessions.",
       ),
     env: z

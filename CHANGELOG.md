@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-09
+
+### Changed
+
+- `verify_runner` raises the in-flight cap of the haiku and sonnet lanes from verify's default of 2 to 4. The server adds `--lane-max haiku=4` or `--lane-max sonnet=4` only when the cells use that lane and `lane_max` does not name it. A cap that the call sets still wins. A run that uses no Claude Code lane passes no new flag.
+
 ## [0.5.0] - 2026-10-07
 
 ### Added

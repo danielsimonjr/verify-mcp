@@ -28,3 +28,4 @@ Open work for this repository. Check an item off when it lands, in the same comm
 - [x] The plugin ships no default model: pass VERIFY_MCP_* through empty, drop the model and host from the docs, pin it with a test, 0.4.2
 - [x] example.mcp.json for a user's own server entry, README mention, gitignore a local root .mcp.json
 - [x] Tuning variables in the env profile: VERIFY_MCP_THINKING, _NUDGE_TIMEOUT, _MAX_TOKENS, _REQUEST_TIMEOUT (0.5.0)
+- [x] Haiku and sonnet lane caps default to 4 when the cells use the lane and the call names no cap (0.5.1)
