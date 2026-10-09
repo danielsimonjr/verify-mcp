@@ -61,7 +61,7 @@ describe("MCP protocol", () => {
       // A client builds its call from this schema: lane_max must name each lane and allow no other key.
       const runner = listed.tools.find((tool) => tool.name === "verify_runner");
       const laneMax = (runner?.inputSchema.properties as Record<string, Record<string, unknown>> | undefined)?.lane_max;
-      expect(Object.keys((laneMax?.properties as object | undefined) ?? {}).sort()).toEqual(["flash", "haiku", "opus", "sonnet"]);
+      expect(Object.keys((laneMax?.properties as object | undefined) ?? {}).sort()).toEqual(["fable", "haiku", "opus", "sonnet"]);
       expect(laneMax?.additionalProperties).toBe(false);
 
       const checked = await mcp.callTool({

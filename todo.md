@@ -30,3 +30,4 @@ Open work for this repository. Check an item off when it lands, in the same comm
 - [x] Tuning variables in the env profile: VERIFY_MCP_THINKING, _NUDGE_TIMEOUT, _MAX_TOKENS, _REQUEST_TIMEOUT (0.5.0)
 - [x] Haiku and sonnet lane caps default to 4 when the cells use the lane and the call names no cap (0.5.1)
 - [x] All four lanes run Claude Code (verify 0.2.0): pin verify 0.2.0, drop the wrapper cap default, say that every lane needs env none (0.6.0)
+- [x] The flash lane is renamed fable (verify 0.3.0): LANES, max_flash -> max_fable, lane_max key, docs, pin (0.7.0)

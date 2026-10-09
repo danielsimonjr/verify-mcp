@@ -11,7 +11,7 @@ describe("runner input", () => {
   // workspace under it, so a separator or a dot segment in either value reaches outside RUNS.
   test("rejects a pool or run name that is not one path segment", () => {
     for (const cell of ["wb:x/../../../outside", "wb:..", "wb:.", "wb:a\\b", "wb:.hidden"]) {
-      expect(ok({ cells: [cell], lane: "flash" }).success).toBe(false);
+      expect(ok({ cells: [cell], lane: "fable" }).success).toBe(false);
     }
     for (const run_name of ["../escape", "a/b", "a\\b", "..", ".", ".hidden"]) {
       expect(ok({ run_name }).success).toBe(false);
@@ -30,7 +30,7 @@ describe("runner input", () => {
     for (const cell_cap of ["wb=0", "wb=ten", "wb", "wb=3,", "nope=3", "wb=-1"]) {
       expect(ok({ cell_cap }).success).toBe(false);
     }
-    expect(ok({ lane: "flash", cell_cap: "wb=3" }).success).toBe(true);
+    expect(ok({ lane: "fable", cell_cap: "wb=3" }).success).toBe(true);
     expect(ok({ cell_cap: "wb=3,default=5" }).success).toBe(true);
   });
 
@@ -42,11 +42,13 @@ describe("runner input", () => {
     }
   });
 
-  // The pinned runner applies --max-flash, then --lane-max over it, so one of two values is dropped.
+  // The pinned runner applies --max-fable, then --lane-max over it, so one of two values is dropped.
   test("refuses a cap set twice for one lane", () => {
-    expect(ok({ max_flash: 3, lane_max: { flash: 5 } }).success).toBe(false);
+    expect(ok({ max_fable: 3, lane_max: { fable: 5 } }).success).toBe(false);
+    expect(ok({ lane: "flash" }).success).toBe(false);
+    expect(ok({ lane_max: { flash: 2 } }).success).toBe(false);
     expect(ok({ max_opus: 3, lane_max: { opus: 5 } }).success).toBe(false);
-    expect(ok({ max_flash: 3, lane_max: { haiku: 5 } }).success).toBe(true);
+    expect(ok({ max_fable: 3, lane_max: { haiku: 5 } }).success).toBe(true);
   });
 
   test("passes the execution environment the Claude Code lanes need", () => {

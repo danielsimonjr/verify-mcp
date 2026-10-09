@@ -2,7 +2,7 @@ import * as z from "zod";
 
 export const BENCHES = ["apex", "wsb", "wb", "sb2", "jb"] as const;
 /** Lane names in the pinned runner's config.LANES. tests/schemas.test.ts keeps both lists equal to the pin. */
-export const LANES = ["flash", "opus", "haiku", "sonnet"] as const;
+export const LANES = ["fable", "opus", "haiku", "sonnet"] as const;
 /** The driver's execution environments. Provider claude-code and every lane need `none`. */
 export const ENVS = ["jail", "none", "native", "native-full"] as const;
 
@@ -124,13 +124,13 @@ export const runnerInput = z
     lane: z
       .enum(LANES)
       .optional()
-      .describe("Verifier lane: flash, opus, haiku or sonnet. Required when a pool is not itself a lane name."),
-    max_flash: z.number().int().positive().optional().describe("In-flight cap for the flash lane. Verify's default is 2."),
+      .describe("Verifier lane: fable, opus, haiku or sonnet. Required when a pool is neither a lane name nor flash (verify runs the flash pools on the fable lane)."),
+    max_fable: z.number().int().positive().optional().describe("In-flight cap for the fable lane. Verify's default is 2."),
     max_opus: z.number().int().positive().optional().describe("In-flight cap for the opus lane. Verify's default is 2."),
     lane_max: laneCaps
       .optional()
       .describe(
-        "In-flight cap per lane, each passed as --lane-max LANE=N. Verify's defaults: flash 2, opus 2, haiku 4, " +
+        "In-flight cap per lane, each passed as --lane-max LANE=N. Verify's defaults: fable 2, opus 2, haiku 4, " +
           "sonnet 4. All four lanes run Claude Code, so the caps stay low: the subscription's usage limit is shared " +
           "with the account's other Claude Code sessions.",
       ),
@@ -169,10 +169,10 @@ export const runnerInput = z
     ...localModelShape,
   })
   .strict()
-  // The pinned runner applies --max-flash and --max-opus, then --lane-max over them, so a second value
+  // The pinned runner applies --max-fable and --max-opus, then --lane-max over them, so a second value
   // for the same lane would be dropped without a word.
   .superRefine((input, ctx) => {
-    for (const [alias, lane] of [["max_flash", "flash"], ["max_opus", "opus"]] as const) {
+    for (const [alias, lane] of [["max_fable", "fable"], ["max_opus", "opus"]] as const) {
       if (input[alias] !== undefined && input.lane_max?.[lane] !== undefined) {
         ctx.addIssue({ code: "custom", path: [alias], message: `set the ${lane} cap once: ${alias} or lane_max.${lane}` });
       }

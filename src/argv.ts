@@ -115,7 +115,7 @@ export function runnerArgv(input: RunnerInput): string[] {
   for (const cell of input.cells) args.push("--cells", cell);
   if (input.contract) args.push("--contract", input.contract);
   if (input.lane) args.push("--lane", input.lane);
-  if (input.max_flash !== undefined) args.push("--max-flash", String(input.max_flash));
+  if (input.max_fable !== undefined) args.push("--max-fable", String(input.max_fable));
   if (input.max_opus !== undefined) args.push("--max-opus", String(input.max_opus));
   for (const lane of LANES) {
     const cap = input.lane_max?.[lane];

@@ -5,7 +5,7 @@
     "": {
       "name": "verify-mcp",
       "dependencies": {
-        "@danielsimonjr/verify": "0.2.0",
+        "@danielsimonjr/verify": "0.3.0",
         "@modelcontextprotocol/server": "2.3.0",
         "zod": "4.2.0",
       },
@@ -19,7 +19,7 @@
     },
   },
   "packages": {
-    "@danielsimonjr/verify": ["@danielsimonjr/verify@0.2.0", "", { "dependencies": { "exceljs": "^4.4.0", "fast-xml-parser": "^5.7.0", "jszip": "^3.10.1", "pdfjs-dist": "^4.10.38", "playwright": "^1.50.0" }, "bin": { "veriharness": "dist/harness/cli.js" } }, "sha512-uA9okqRR8mMf09N+6sJvpxK+8DdE7Fn2xQVl+rIfpRSxsHm9uzcSrSoEaxoYnymkqmnxYKzJUmvik/CX31h9pg=="],
+    "@danielsimonjr/verify": ["@danielsimonjr/verify@0.3.0", "", { "dependencies": { "exceljs": "^4.4.0", "fast-xml-parser": "^5.7.0", "jszip": "^3.10.1", "pdfjs-dist": "^4.10.38", "playwright": "^1.50.0" }, "bin": { "veriharness": "dist/harness/cli.js" } }, "sha512-Cd1EiCQOZJmcYpiqF8l8q0+q2Kghl6MhK8/jKh3UC0VcCgJJaEcM74bG1MMh2Y6cQpPQPR9oR4Tsz+H1M3KmQQ=="],
 
     "@fast-csv/format": ["@fast-csv/format@4.3.5", "", { "dependencies": { "@types/node": "^14.0.1", "lodash.escaperegexp": "^4.1.2", "lodash.isboolean": "^3.0.3", "lodash.isequal": "^4.5.0", "lodash.isfunction": "^3.0.9", "lodash.isnil": "^4.0.0" } }, "sha512-8iRn6QF3I8Ak78lNAa+Gdl5MJJBM5vRHivFtMRUWINdevNo00K7OXxS2PshawLKTejVwieIlPmK5YlLu6w4u8A=="],
 

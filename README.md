@@ -4,7 +4,7 @@ An MCP server for [verify](https://github.com/danielsimonjr/verify), the VeriHar
 harness. It lets an agent in Claude Code, Codex or Cursor verify a task, run a benchmark, and read
 the results through ten tools.
 
-verify-mcp is version 0.6.0. It is not published to npm or to a public plugin marketplace. Install it
+verify-mcp is version 0.7.0. It is not published to npm or to a public plugin marketplace. Install it
 from this repository.
 
 ## Contents
@@ -50,7 +50,7 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.2.0
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.3.0
   (`@danielsimonjr/verify`, the pinned version) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
@@ -178,8 +178,9 @@ cell directory also holds `run.json`, and `verify_score` writes `scores.json` an
 ### Run a benchmark
 
 The benchmarks are `apex`, `wsb`, `wb`, `sb2` and `jb`. A *cell* is one `bench:pool` pair, for
-example `wb:flash`. A pool named after a lane runs on that lane: `flash`, `opus`, `haiku` or
-`sonnet`. For another pool name, set `lane`.
+example `wb:flash`. A pool named after a lane runs on that lane: `fable`, `opus`, `haiku` or
+`sonnet`. The archived `flash` pools (Gemini 3.5 Flash rollouts) run on the `fable` lane. For
+another pool name, set `lane`.
 
 1. `verify_materialize` with `bench`: build the task workspaces from the benchmark archive.
 2. `verify_runner` with `cells` and `run_name`: verify every task in each cell. The runner can
@@ -216,7 +217,7 @@ The server passes an optional flag only when you set it, so verify keeps its own
 | `env` | `jail` (Linux only) |
 | `skills_mode` | `mounted` |
 | `turn_timeout`, `nudge_timeout`, `task_timeout` | 1800 s, 600 s, 3600 s |
-| `lane_max` (runner lane caps) | flash 2, opus 2, haiku 4, sonnet 4. `max_flash` and `max_opus` also set the first two |
+| `lane_max` (runner lane caps) | fable 2, opus 2, haiku 4, sonnet 4. `max_fable` and `max_opus` also set the first two |
 | `skip_inflight` (runner) | 45 minutes |
 | `workers`, `batch` (score) | 6, 1 |
 | `request_timeout` (local models) | 180 s |
@@ -237,10 +238,10 @@ It uses the login that Claude Code holds and does not read or print a credential
 - Do not set `base_url`, `context_size`, `temperature`, `max_tokens`, `top_p` or
   `request_timeout` for `verify_driver` or `verify_runner`, or `thinking` for `verify_driver`.
   verify refuses them with this provider. `verify_model_check` accepts `request_timeout`.
-- All four runner lanes use this provider: `flash` is `claude-fable-5-1`, `opus` is `claude-opus-5-5`,
+- All four runner lanes use this provider: `fable` is `claude-fable-5-1`, `opus` is `claude-opus-5-5`,
   `haiku` is `claude-haiku-5-5` and `sonnet` is `claude-sonnet-5-5`. A cell such as
   `sb2:haiku` runs on the `haiku` lane. Set `env: "none"` for the run.
-- The `flash` and `opus` lanes start two tasks at a time and `haiku` and `sonnet` four, because the account's usage limit is shared with every
+- The `fable` and `opus` lanes start two tasks at a time and `haiku` and `sonnet` four, because the account's usage limit is shared with every
   other Claude Code session. `lane_max` raises a lane, for example `{ "haiku": 4 }`. When the
   account reaches its usage limit, the runner starts no more tasks on that lane.
 
@@ -265,9 +266,9 @@ gives the flags that each turn uses and what they do not isolate.
 - `run_name` and each pool in `cells` must be one path segment: letters, digits, `.`, `_` and
   `-`, not starting with a dot. verify joins both under `VERIHARNESS_RUNS` and deletes an existing
   task workspace there.
-- `lane` and each `lane_max` key must be `flash`, `opus`, `haiku` or `sonnet`. Each `lane_max`
+- `lane` and each `lane_max` key must be `fable`, `opus`, `haiku` or `sonnet`. Each `lane_max`
   value must be 1 or more.
-- The `flash` and `opus` caps are set once: with `max_flash` or `max_opus`, or in `lane_max`.
+- The `fable` and `opus` caps are set once: with `max_fable` or `max_opus`, or in `lane_max`.
   verify applies `lane_max` over the other two, so a second value would be dropped.
 - Each `cell_cap` entry must be `key=N`, where `key` is a bench or `default` and `N` is 1 or more.
   verify accepts a cap of 0, and its scheduler then never starts the cell's tasks.

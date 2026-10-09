@@ -6,8 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-09
+
 ### Changed
 
+- The pin moves to verify 0.3.0, which renames the lane `flash` to `fable`. `LANES` and the `lane_max` keys follow, and `max_flash` becomes `max_fable`. A cell on an archived `flash` pool still runs: verify gives it the `fable` lane.
 - README: the four phases carry the verify role names Checker, Challenger, Reviewer and Fixer. The Worker makes each rollout. Tool names, fields and files are unchanged.
 
 ## [0.6.0] - 2026-10-09

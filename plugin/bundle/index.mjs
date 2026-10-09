@@ -21850,7 +21850,7 @@ function originValidationResponse(req, allowedOriginHostnames) {
 
 // src/schemas.ts
 var BENCHES = ["apex", "wsb", "wb", "sb2", "jb"];
-var LANES = ["flash", "opus", "haiku", "sonnet"];
+var LANES = ["fable", "opus", "haiku", "sonnet"];
 var ENVS = ["jail", "none", "native", "native-full"];
 var SEGMENT = "[A-Za-z0-9][A-Za-z0-9._-]*";
 var SEGMENT_HELP = "letters, digits, dot, underscore and hyphen, not starting with a dot";
@@ -21900,10 +21900,10 @@ var runnerInput = object({
   cells: array(string2().regex(CELL, `cell must be bench:pool, bench one of ${BENCHES.join(", ")}, pool ${SEGMENT_HELP}`)).min(1).describe("Cells to run. Each entry is bench:pool, for example wb:flash."),
   run_name: string2().regex(new RegExp(`^${SEGMENT}$`), `run_name must be one path segment: ${SEGMENT_HELP}`).describe("Run directory name under VERIHARNESS_RUNS. One path segment."),
   contract: _enum(["artifact", "pick-only"]).optional(),
-  lane: _enum(LANES).optional().describe("Verifier lane: flash, opus, haiku or sonnet. Required when a pool is not itself a lane name."),
-  max_flash: number2().int().positive().optional().describe("In-flight cap for the flash lane. Verify's default is 2."),
+  lane: _enum(LANES).optional().describe("Verifier lane: fable, opus, haiku or sonnet. Required when a pool is neither a lane name nor flash (verify runs the flash pools on the fable lane)."),
+  max_fable: number2().int().positive().optional().describe("In-flight cap for the fable lane. Verify's default is 2."),
   max_opus: number2().int().positive().optional().describe("In-flight cap for the opus lane. Verify's default is 2."),
-  lane_max: laneCaps.optional().describe("In-flight cap per lane, each passed as --lane-max LANE=N. Verify's defaults: flash 2, opus 2, haiku 4, " + "sonnet 4. All four lanes run Claude Code, so the caps stay low: the subscription's usage limit is shared " + "with the account's other Claude Code sessions."),
+  lane_max: laneCaps.optional().describe("In-flight cap per lane, each passed as --lane-max LANE=N. Verify's defaults: fable 2, opus 2, haiku 4, " + "sonnet 4. All four lanes run Claude Code, so the caps stay low: the subscription's usage limit is shared " + "with the account's other Claude Code sessions."),
   env: _enum(ENVS).optional().describe("Execution environment, passed to every driver as --env. Omit to keep verify's default (jail). " + "Every runner lane and provider claude-code need none."),
   cell_cap: string2().regex(CELL_CAP, "cell_cap must be key=N[,key=N] with N a positive integer and key a bench name or default").optional().describe("In-flight cap per bench, passed as --cell-cap: key=N[,key=N], key a bench name or default."),
   only: array(string2().min(1)).optional().describe("Task keys. Each becomes --only."),
@@ -21922,7 +21922,7 @@ var runnerInput = object({
   timeout_seconds: timeoutSeconds,
   ...localModelShape
 }).strict().superRefine((input, ctx) => {
-  for (const [alias, lane] of [["max_flash", "flash"], ["max_opus", "opus"]]) {
+  for (const [alias, lane] of [["max_fable", "fable"], ["max_opus", "opus"]]) {
     if (input[alias] !== undefined && input.lane_max?.[lane] !== undefined) {
       ctx.addIssue({ code: "custom", path: [alias], message: `set the ${lane} cap once: ${alias} or lane_max.${lane}` });
     }
@@ -22055,8 +22055,8 @@ function runnerArgv(input) {
     args.push("--contract", input.contract);
   if (input.lane)
     args.push("--lane", input.lane);
-  if (input.max_flash !== undefined)
-    args.push("--max-flash", String(input.max_flash));
+  if (input.max_fable !== undefined)
+    args.push("--max-fable", String(input.max_fable));
   if (input.max_opus !== undefined)
     args.push("--max-opus", String(input.max_opus));
   for (const lane of LANES) {
@@ -22203,7 +22203,7 @@ function applyDefaultProfile(input, env, driver) {
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.2.0";
+var VERIFY_VERSION = "0.3.0";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -22926,7 +22926,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.6.0";
+var SERVER_VERSION = "0.7.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts
