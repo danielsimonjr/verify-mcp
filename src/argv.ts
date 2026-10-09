@@ -255,6 +255,7 @@ export function workersArgv(input: WorkersInput): string[] {
   if (input.prompt) args.push("--prompt", input.prompt);
   for (const name of input.only ?? []) args.push("--only", name);
   if (input.timeout !== undefined) args.push("--timeout", String(input.timeout));
+  if (input.max_turns !== undefined) args.push("--max-turns", String(input.max_turns));
   if (input.max_parallel !== undefined) args.push("--max-parallel", String(input.max_parallel));
   if (input.env) args.push("--env", input.env);
   if (input.temperature !== undefined) args.push("--temperature", String(input.temperature));

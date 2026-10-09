@@ -173,6 +173,7 @@ describe("verify_workers", () => {
       prompt: "p.md",
       only: ["b01", "b02"],
       timeout: 1800,
+      max_turns: 25,
       max_parallel: 2,
       env: "none",
       temperature: 0.2,
@@ -192,6 +193,7 @@ describe("verify_workers", () => {
       "--only", "b01",
       "--only", "b02",
       "--timeout", "1800",
+      "--max-turns", "25",
       "--max-parallel", "2",
       "--env", "none",
       "--temperature", "0.2",
@@ -200,6 +202,13 @@ describe("verify_workers", () => {
     ]);
     expect(workersTimeoutSeconds(input)).toBe(43200);
     expect(workersTimeoutSeconds({ ...input, timeout_seconds: 60 })).toBe(60);
+  });
+
+  test("max_turns is a positive whole number", () => {
+    expect(workersInput.safeParse({ dir: "w", provider: "p", model: "m", max_turns: 15 }).success).toBe(true);
+    for (const bad of [0, -1, 2.5]) {
+      expect(workersInput.safeParse({ dir: "w", provider: "p", model: "m", max_turns: bad }).success).toBe(false);
+    }
   });
 
   test("the schema takes env none only", () => {
@@ -247,8 +256,8 @@ describe("verify_workers", () => {
 });
 
 describe("pin and model check", () => {
-  test("the pin is verify 0.5.0", () => {
-    expect(VERIFY_VERSION).toBe("0.5.0");
+  test("the pin is verify 0.6.0", () => {
+    expect(VERIFY_VERSION).toBe("0.6.0");
   });
 
   test("model check returns the window and its source", async () => {

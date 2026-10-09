@@ -50,7 +50,7 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.5.0
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.6.0
   (`@danielsimonjr/verify`, the pinned version) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
@@ -281,7 +281,8 @@ runs one batch at a time; Claude Code runs up to the lane cap and needs `env: "n
 finished rollout is one progress notice. The result holds `rollouts` and `summary`. A rollout
 with an error makes the call an error, and the records are still returned. A Claude Code usage
 limit stops the run (exit 75); call again after the limit resets, and the complete rollouts are
-skipped. verify's [batching guide](https://github.com/danielsimonjr/verify/blob/main/docs/batching.md)
+skipped. `max_turns` (verify 0.6.0 or later) stops a worker that passes that number of assistant
+turns, with the error `max-turns`; use it for a small local model that can loop. verify's [batching guide](https://github.com/danielsimonjr/verify/blob/main/docs/batching.md)
 has a worked example.
 
 ```json

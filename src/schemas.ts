@@ -325,6 +325,12 @@ export const workersInput = z
     prompt: z.string().min(1).optional().describe("The worker prompt file. Default DIR/worker_prompt.md."),
     only: z.array(z.string().min(1)).optional().describe("Batch names. Each becomes --only."),
     timeout: z.number().int().positive().optional().describe("Seconds for one worker, passed as --timeout. Verify's default is 3600."),
+    max_turns: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe("Most assistant turns for one worker, passed as --max-turns. A worker past it stops with error max-turns. Default: no cap."),
     max_parallel: z.number().int().positive().optional().describe("Workers at once. Default: count for a local model, the lane cap for Claude Code."),
     env: z.literal("none").optional().describe("Execution environment. Claude Code workers need none."),
     temperature: localModelShape.temperature,

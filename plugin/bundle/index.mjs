@@ -22007,6 +22007,7 @@ var workersInput = object({
   prompt: string2().min(1).optional().describe("The worker prompt file. Default DIR/worker_prompt.md."),
   only: array(string2().min(1)).optional().describe("Batch names. Each becomes --only."),
   timeout: number2().int().positive().optional().describe("Seconds for one worker, passed as --timeout. Verify's default is 3600."),
+  max_turns: number2().int().positive().optional().describe("Most assistant turns for one worker, passed as --max-turns. A worker past it stops with error max-turns. Default: no cap."),
   max_parallel: number2().int().positive().optional().describe("Workers at once. Default: count for a local model, the lane cap for Claude Code."),
   env: literal("none").optional().describe("Execution environment. Claude Code workers need none."),
   temperature: localModelShape.temperature,
@@ -22270,6 +22271,8 @@ function workersArgv(input) {
     args.push("--only", name);
   if (input.timeout !== undefined)
     args.push("--timeout", String(input.timeout));
+  if (input.max_turns !== undefined)
+    args.push("--max-turns", String(input.max_turns));
   if (input.max_parallel !== undefined)
     args.push("--max-parallel", String(input.max_parallel));
   if (input.env)
@@ -22343,7 +22346,7 @@ function applyDefaultProfile(input, env, driver) {
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.5.0";
+var VERIFY_VERSION = "0.6.0";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -23131,7 +23134,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.9.0";
+var SERVER_VERSION = "0.10.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts

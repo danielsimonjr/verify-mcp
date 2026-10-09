@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-09
+
+### Added
+- `verify_workers` takes `max_turns`, passed as `--max-turns`: a worker that passes that number of assistant turns stops with the error `max-turns`.
+
+### Changed
+- The verify pin is 0.6.0, the first version with `veriharness workers --max-turns`.
+
 ## [0.9.0] - 2026-10-09
 
 ### Added
