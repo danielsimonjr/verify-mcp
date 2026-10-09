@@ -6,6 +6,13 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-09
+
+### Changed
+
+- The pin moves to verify 0.2.0. All four lanes (`flash`, `opus`, `haiku`, `sonnet`) run Claude Code, so every lane needs `env: "none"`. The text of the tool schemas, the README and the verify skill says so.
+- verify sets the default lane caps: flash 2, opus 2, haiku 4, sonnet 4. The wrapper default of 4 for haiku and sonnet from 0.5.1 is removed, because the pinned verify now holds the same value.
+
 ## [0.5.1] - 2026-10-09
 
 ### Changed

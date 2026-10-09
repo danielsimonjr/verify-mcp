@@ -115,7 +115,7 @@ const MODEL_CHECK_MISSING =
 
 const CLAUDE_CODE_MISSING =
   `This verify build does not include the Claude Code provider. It was added with the Haiku and Sonnet ` +
-  `lanes (verify PR #11, commit 102894a). The pinned version ${VERIFY_VERSION} includes it; ` +
+  `lanes (verify PR #11, commit 102894a); verify 0.2.0 runs all four lanes on it. The pinned version ${VERIFY_VERSION} includes it; ` +
   `this VERIHARNESS_BIN is older.`;
 
 function explain(command: string, result: RunResult): string {

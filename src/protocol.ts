@@ -22,13 +22,13 @@ export const PROTOCOL_VERSION = "2026-07-28";
 
 export const SERVER_NAME = "verify";
 
-export const SERVER_VERSION = "0.5.1";
+export const SERVER_VERSION = "0.6.0";
 
 export const SERVER_INSTRUCTIONS =
   "Tools wrap the veriharness CLI from danielsimonjr/verify. " +
   "A task directory must contain rollouts/. Local models use provider ollama " +
   "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " +
-  "Claude Code uses provider claude-code with a full model id, or the runner lanes haiku and sonnet; " +
+  "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " +
   "both need env none and use the login Claude Code holds. " +
   "Long tools report progress and stop at their timeout. " +
   "verify_model_check probes a local server or Claude Code before a run. " +

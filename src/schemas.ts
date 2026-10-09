@@ -3,7 +3,7 @@ import * as z from "zod";
 export const BENCHES = ["apex", "wsb", "wb", "sb2", "jb"] as const;
 /** Lane names in the pinned runner's config.LANES. tests/schemas.test.ts keeps both lists equal to the pin. */
 export const LANES = ["flash", "opus", "haiku", "sonnet"] as const;
-/** The driver's execution environments. Provider claude-code and the haiku and sonnet lanes need `none`. */
+/** The driver's execution environments. Provider claude-code and every lane need `none`. */
 export const ENVS = ["jail", "none", "native", "native-full"] as const;
 
 // One path segment. The runner joins run_name and `${bench}_${pool}` under VERIHARNESS_RUNS and
@@ -99,7 +99,7 @@ export const driverInput = z
     env: z
       .enum(ENVS)
       .optional()
-      .describe("Execution environment. Omit to keep verify's default (jail). Provider claude-code needs none."),
+      .describe("Execution environment. Omit to keep verify's default (jail). Provider claude-code and every runner lane need none."),
     turn_timeout: z.number().positive().optional().describe("Seconds, passed as --turn-timeout. Verify's default is 1800."),
     nudge_timeout: z.number().positive().optional().describe("Seconds, passed as --nudge-timeout. Verify's default is 600."),
     task_timeout: z.number().positive().optional().describe("Seconds, passed as --task-timeout. Verify's default is 3600."),
@@ -125,22 +125,21 @@ export const runnerInput = z
       .enum(LANES)
       .optional()
       .describe("Verifier lane: flash, opus, haiku or sonnet. Required when a pool is not itself a lane name."),
-    max_flash: z.number().int().positive().optional().describe("In-flight cap for the flash lane. Verify's default is 25."),
-    max_opus: z.number().int().positive().optional().describe("In-flight cap for the opus lane. Verify's default is 45."),
+    max_flash: z.number().int().positive().optional().describe("In-flight cap for the flash lane. Verify's default is 2."),
+    max_opus: z.number().int().positive().optional().describe("In-flight cap for the opus lane. Verify's default is 2."),
     lane_max: laneCaps
       .optional()
       .describe(
-        "In-flight cap per lane, each passed as --lane-max LANE=N. Verify's defaults: flash 25, opus 45, haiku 2, " +
-          "sonnet 2. This server raises haiku and sonnet to 4 when the cells use that lane and this field omits it. " +
-          "The Claude Code lanes stay low because the subscription's usage limit is shared with the " +
-          "account's other Claude Code sessions.",
+        "In-flight cap per lane, each passed as --lane-max LANE=N. Verify's defaults: flash 2, opus 2, haiku 4, " +
+          "sonnet 4. All four lanes run Claude Code, so the caps stay low: the subscription's usage limit is shared " +
+          "with the account's other Claude Code sessions.",
       ),
     env: z
       .enum(ENVS)
       .optional()
       .describe(
         "Execution environment, passed to every driver as --env. Omit to keep verify's default (jail). " +
-          "The haiku and sonnet lanes and provider claude-code need none.",
+          "Every runner lane and provider claude-code need none.",
       ),
     cell_cap: z
       .string()

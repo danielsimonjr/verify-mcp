@@ -105,17 +105,10 @@ export function driverTimeoutSeconds(input: DriverInput): number {
 }
 
 /**
- * In-flight cap for a Claude Code lane that the call uses and does not cap. Verify's own default is 2.
- * The cap is the only throttle on the subscription's shared usage limit.
- */
-const CLAUDE_LANE_DEFAULT_CAP: Partial<Record<(typeof LANES)[number], number>> = { haiku: 4, sonnet: 4 };
-
-/**
  * Builds `runner --run-name <run_name>` and one `--cells` flag per cell.
  *
  * Each option that `input` sets adds a flag. `only`, `skill` and `driver_arg` add one flag per
- * entry, and `lane_max` one `--lane-max LANE=N` per lane, in LANES order. A haiku or sonnet lane that the cells
- * use and `lane_max` leaves out gets the default cap. The local model flags come last.
+ * entry, and `lane_max` one `--lane-max LANE=N` per lane, in LANES order. The local model flags come last.
  */
 export function runnerArgv(input: RunnerInput): string[] {
   const args = ["runner", "--run-name", input.run_name];
@@ -124,9 +117,8 @@ export function runnerArgv(input: RunnerInput): string[] {
   if (input.lane) args.push("--lane", input.lane);
   if (input.max_flash !== undefined) args.push("--max-flash", String(input.max_flash));
   if (input.max_opus !== undefined) args.push("--max-opus", String(input.max_opus));
-  const used = new Set<string>([...(input.lane ? [input.lane] : []), ...input.cells.map((cell) => cell.slice(cell.lastIndexOf(":") + 1))]);
   for (const lane of LANES) {
-    const cap = input.lane_max?.[lane] ?? (used.has(lane) ? CLAUDE_LANE_DEFAULT_CAP[lane] : undefined);
+    const cap = input.lane_max?.[lane];
     if (cap !== undefined) args.push("--lane-max", `${lane}=${cap}`);
   }
   if (input.env) args.push("--env", input.env);

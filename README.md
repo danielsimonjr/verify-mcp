@@ -4,7 +4,7 @@ An MCP server for [verify](https://github.com/danielsimonjr/verify), the VeriHar
 harness. It lets an agent in Claude Code, Codex or Cursor verify a task, run a benchmark, and read
 the results through ten tools.
 
-verify-mcp is version 0.5.1. It is not published to npm or to a public plugin marketplace. Install it
+verify-mcp is version 0.6.0. It is not published to npm or to a public plugin marketplace. Install it
 from this repository.
 
 ## Contents
@@ -49,7 +49,7 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.1.0
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.2.0
   (`@danielsimonjr/verify`, the pinned version) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
@@ -215,7 +215,7 @@ The server passes an optional flag only when you set it, so verify keeps its own
 | `env` | `jail` (Linux only) |
 | `skills_mode` | `mounted` |
 | `turn_timeout`, `nudge_timeout`, `task_timeout` | 1800 s, 600 s, 3600 s |
-| `lane_max` (runner lane caps) | flash 25, opus 45, haiku 2, sonnet 2. `max_flash` and `max_opus` also set the first two |
+| `lane_max` (runner lane caps) | flash 2, opus 2, haiku 4, sonnet 4. `max_flash` and `max_opus` also set the first two |
 | `skip_inflight` (runner) | 45 minutes |
 | `workers`, `batch` (score) | 6, 1 |
 | `request_timeout` (local models) | 180 s |
@@ -236,9 +236,10 @@ It uses the login that Claude Code holds and does not read or print a credential
 - Do not set `base_url`, `context_size`, `temperature`, `max_tokens`, `top_p` or
   `request_timeout` for `verify_driver` or `verify_runner`, or `thinking` for `verify_driver`.
   verify refuses them with this provider. `verify_model_check` accepts `request_timeout`.
-- The runner lanes `haiku` and `sonnet` use this provider with those model ids. A cell such as
+- All four runner lanes use this provider: `flash` is `claude-fable-5-1`, `opus` is `claude-opus-5-5`,
+  `haiku` is `claude-haiku-5-5` and `sonnet` is `claude-sonnet-5-5`. A cell such as
   `sb2:haiku` runs on the `haiku` lane. Set `env: "none"` for the run.
-- The lanes start two tasks at a time, because the account's usage limit is shared with every
+- The `flash` and `opus` lanes start two tasks at a time and `haiku` and `sonnet` four, because the account's usage limit is shared with every
   other Claude Code session. `lane_max` raises a lane, for example `{ "haiku": 4 }`. When the
   account reaches its usage limit, the runner starts no more tasks on that lane.
 
@@ -301,7 +302,7 @@ characters of stdout and of stderr.
 | Message starts with | Cause | Action |
 | --- | --- | --- |
 | verify is not installed | The server found no verify command | Set `VERIHARNESS_BIN`, or run `bun install` in this repository |
-| model-check is absent | The verify build is older than commit `756bc2b` (verify 0.1.0 has it) | Update the verify checkout |
+| model-check is absent | The verify build is older than commit `756bc2b` (verify 0.1.0 and later have it) | Update the verify checkout |
 | The local model server is down | Ollama or `llama-server` did not answer | Start the server, or set `base_url` |
 
 ## Configuration
