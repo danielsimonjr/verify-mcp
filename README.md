@@ -25,17 +25,18 @@ from this repository.
 
 ## What verify does
 
-verify takes one task and the results of *N* independent attempts at it (the *rollouts*). A
-verifier model then checks the rollouts against the task's own files, in four phases:
+verify takes one task and the results of *N* independent attempts at it (the *rollouts*). Each
+attempt comes from a **Worker**. A verifier model then checks the rollouts against the task's own
+files in four phases. Each phase has a role:
 
-1. **Resolve disagreements.** One session finds the claims on which the rollouts differ, runs the
+1. **Checker: resolve disagreements.** One session finds the claims on which the rollouts differ, runs the
    check that separates them, and records who was right (`ledger_elim.json`).
-2. **Challenge the consensus.** A second, isolated session finds the claims that all rollouts share
+2. **Challenger: challenge the consensus.** A second, isolated session finds the claims that all rollouts share
    and tries to break each one against the inputs (`ledger_fals.json`).
-3. **Adjudicate.** A fresh session reads only the two records. It selects the best rollout as the
+3. **Reviewer: adjudicate.** A fresh session reads only the two records. It selects the best rollout as the
    base, lists the changes the evidence supports, and lists the questions it cannot settle
    (`finish.json`).
-4. **Repair.** The adjudication session applies those changes and delivers the result to
+4. **Fixer: repair.** The Reviewer session applies those changes and delivers the result to
    `out/deliverables/`, with a record of what it changed (`repair.json`).
 
 The verifier is not a stronger judge. Its advantage comes from the structure of the rollout pool
@@ -156,7 +157,7 @@ The driver writes its output into the same directory:
 | `driver.log` | `driver_log` | The driver's log |
 
 The driver also writes the model transcripts under `session/`. With `contract: "pick-only"`, the
-driver stops after adjudication and writes no `repair.json` or `out/deliverables/`.
+driver stops after the Reviewer and writes no `repair.json` or `out/deliverables/`.
 
 A batch run has the same files for each task, under `VERIHARNESS_RUNS/<run>/<bench>_<pool>/`. The
 cell directory also holds `run.json`, and `verify_score` writes `scores.json` and
@@ -211,7 +212,7 @@ The server passes an optional flag only when you set it, so verify keeps its own
 
 | Option | verify default |
 | --- | --- |
-| `contract` | `artifact` (repair and deliver). `pick-only` stops after adjudication |
+| `contract` | `artifact` (repair and deliver). `pick-only` stops after the Reviewer |
 | `env` | `jail` (Linux only) |
 | `skills_mode` | `mounted` |
 | `turn_timeout`, `nudge_timeout`, `task_timeout` | 1800 s, 600 s, 3600 s |

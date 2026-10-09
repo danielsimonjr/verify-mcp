@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- README: the four phases carry the verify role names Checker, Challenger, Reviewer and Fixer. The Worker makes each rollout. Tool names, fields and files are unchanged.
+
 ## [0.6.0] - 2026-10-09
 
 ### Changed
