@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-10
+
+### Changed
+- The verify pin is 0.10.1: a record that an investigation wrote in its own folder is no longer
+  judged missing, and the records of an earlier run are set aside to `previous/` (verify CHANGELOG 0.10.1).
+
 ## [0.14.0] - 2026-10-10
 
 ### Changed
