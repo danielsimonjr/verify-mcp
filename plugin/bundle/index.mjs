@@ -22376,7 +22376,7 @@ function applyBatchProfile(input, env) {
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.9.0";
+var VERIFY_VERSION = "0.10.0";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -23013,8 +23013,38 @@ function handleDriver(raw, deps, progress) {
   const input = applyDefaultProfile(raw, deps.env, true);
   return withLaunch(deps, async (launch) => {
     const result = await invoke2(deps, launch, "driver", driverArgv(input), driverTimeoutSeconds(input), progress);
-    return finish("driver", result, false);
+    return withDriverResult(finish("driver", result, false), input.task_dir);
   });
+}
+function withDriverResult(outcome, taskDir) {
+  let record;
+  try {
+    record = asRecord(JSON.parse(readFileSync(resolve3(taskDir, "result.json"), "utf8")));
+  } catch {
+    record = undefined;
+  }
+  if (!record)
+    return outcome;
+  const lines = [];
+  const inv = asRecord(record.investigations) ?? {};
+  const missing = Object.entries(inv).filter(([, has]) => has !== true).map(([name]) => name);
+  if (missing.length)
+    lines.push(`investigations without a record: ${missing.join(", ")}`);
+  if (typeof record.base === "string") {
+    lines.push(record.base === "none" ? "base none: no rollout was a usable start, so the deliverable was built from the inputs" : `base ${record.base}`);
+  }
+  const delivery = asRecord(record.delivery);
+  if (delivery && delivery.valid === false)
+    lines.push(`delivery not valid: ${String(delivery.reason ?? "no reason given")}`);
+  const scope = Array.isArray(record.scope) ? record.scope.map(String) : [];
+  if (scope.length)
+    lines.push(`investigations wrote outside their own files: ${scope.join("; ")}`);
+  return {
+    ...outcome,
+    text: [outcome.text, ...lines].join(`
+`),
+    structured: { ...outcome.structured ?? {}, result: record }
+  };
 }
 function handleRunner(input, deps, progress) {
   return withLaunch(deps, async (launch) => {
@@ -23096,9 +23126,20 @@ function handleWorkers(raw, deps, progress) {
     const failed = result.code !== 0 || result.timedOut || result.aborted;
     const counts = summary ? `complete ${summary.complete}, errors ${summary.errors}, skipped ${summary.skipped}` : "no summary";
     const head = result.code === 75 ? "veriharness workers stopped at a Claude Code usage limit (exit 75). Run it again after the limit resets; complete rollouts are skipped." : failed ? explain("workers", result) : "veriharness workers finished.";
+    const rolloutLines = rollouts.map((r) => {
+      const facts = [
+        r.seconds !== undefined && `${r.seconds} s`,
+        r.turns !== undefined && `${r.turns} turns`,
+        r.peakContext !== undefined && `peak ${r.peakContext}`,
+        r.attempts !== undefined && Number(r.attempts) > 1 && `${r.attempts} attempts`
+      ].filter(Boolean).join(", ");
+      return `${String(r.batch ?? "?")}/${String(r.rollout)}: ${r.error ? String(r.error) : "complete"}${facts ? ` (${facts})` : ""}`;
+    });
+    const warnings = result.stderr.split(`
+`).map((l) => l.trim()).filter((l) => l.startsWith("workers: ") && !head.includes(l)).slice(0, 20);
     return {
-      text: `${head}
-rollouts ${rollouts.length}: ${counts}`,
+      text: [head, `rollouts ${rollouts.length}: ${counts}`, ...rolloutLines, ...warnings].join(`
+`),
       ...failed ? { isError: true } : {},
       structured: {
         command: "workers",
@@ -23165,7 +23206,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.13.0";
+var SERVER_VERSION = "0.14.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts

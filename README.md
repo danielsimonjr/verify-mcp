@@ -4,7 +4,7 @@ An MCP server for [verify](https://github.com/danielsimonjr/verify), the VeriHar
 harness. It lets an agent in Claude Code, Codex or Cursor verify a task, run a benchmark, and read
 the results through ten tools.
 
-verify-mcp is version 0.9.0. It is not published to npm or to a public plugin marketplace. Install it
+verify-mcp is not published to npm or to a public plugin marketplace. Install it
 from this repository.
 
 ## Contents
@@ -50,7 +50,7 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.9.0
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.10.0
   (`@danielsimonjr/verify`, the pinned version) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
@@ -198,7 +198,7 @@ that the native environments use.
 | --- | --- | --- |
 | `verify_status` | `--help` | Shows the pin, the resolved command, the data and runs directories, and whether `model-check` is available |
 | `verify_model_check` | `model-check` | Probes Ollama, llama.cpp or Claude Code. Needs `provider` and `model` |
-| `verify_driver` | `driver <task_dir>` | Verifies one task. The directory must contain `rollouts/` |
+| `verify_driver` | `driver <task_dir>` | Verifies one task. The directory must contain `rollouts/`. The result carries the driver's `result.json`: which investigations left a record, the base, the delivery check and any write outside an investigation's files |
 | `verify_runner` | `runner --cells bench:pool --run-name NAME` | Verifies the tasks of one or more cells under `VERIHARNESS_RUNS/<run>/` |
 | `verify_batch` | `batch --items FILE --split RULE --spec FILE --out DIR` | Splits an items file into task folders that each fit a token budget. Returns `manifest.json` |
 | `verify_workers` | `workers <dir>` | Runs N worker rollouts on each batch, each in a temp copy. A second call skips complete rollouts |

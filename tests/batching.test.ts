@@ -269,7 +269,7 @@ describe("verify_workers", () => {
     const runner: CommandRunner = {
       async run(req) {
         for (const line of lines) req.onLine?.(line);
-        return result(1, [lines[0], lines[2], lines[3]].join("\n") + "\n", "workers: ollama:m window=65536 source=loaded\n");
+        return result(1, [lines[0], lines[2], lines[3]].join("\n") + "\n", "workers: ollama:m window=65536 source=loaded\nworkers: note on stderr\n");
       },
     };
     const notes: { message: string; force: boolean }[] = [];
@@ -285,6 +285,11 @@ describe("verify_workers", () => {
     expect(outcome.structured?.rollouts).toEqual([JSON.parse(lines[0]!), JSON.parse(lines[2]!)]);
     expect(outcome.structured?.summary).toEqual({ complete: 1, errors: 1, skipped: 0 });
     expect(outcome.text).toContain("complete 1, errors 1, skipped 0");
+    // The text alone says which rollout failed and why: a host that shows only the text of an error
+    // result must not lose the outcome of each rollout.
+    expect(outcome.text).toContain("b01/r01: complete");
+    expect(outcome.text).toContain("b01/r02: no-json");
+    expect(outcome.text).toContain("workers: note on stderr");
   });
 
   test("exit 75 says the usage limit stopped the run", async () => {
@@ -300,8 +305,8 @@ describe("verify_workers", () => {
 });
 
 describe("pin and model check", () => {
-  test("the pin is verify 0.9.0", () => {
-    expect(VERIFY_VERSION).toBe("0.9.0");
+  test("the pin is verify 0.10.0", () => {
+    expect(VERIFY_VERSION).toBe("0.10.0");
   });
 
   test("model check returns the window and its source", async () => {

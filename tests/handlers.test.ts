@@ -63,6 +63,37 @@ describe("handlers", () => {
     expect(outcome.text).toContain("done");
   });
 
+  test("driver returns result.json, so an exit 0 says what the run did", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "vmcp-driver-"));
+    writeFileSync(
+      join(dir, "result.json"),
+      JSON.stringify({
+        exit: 0,
+        investigations: { elim: false, fals: true },
+        scope: ["out/deliverables/report.json (added; set aside)"],
+        base: "none",
+        work: 3,
+        open: 1,
+        delivery: { written: true, valid: false, reason: "report.json is not valid UTF-8", applied: true },
+      }),
+    );
+    const runner: CommandRunner = { run: async () => ok("done") };
+    const outcome = await handleDriver({ task_dir: dir, provider: "ollama", model: "qwen" }, deps(runner));
+    expect(outcome.isError).toBeUndefined();
+    expect((outcome.structured?.result as { base: string }).base).toBe("none");
+    expect(outcome.text).toContain("investigations without a record: elim");
+    expect(outcome.text).toContain("base none");
+    expect(outcome.text).toContain("delivery not valid: report.json is not valid UTF-8");
+    expect(outcome.text).toContain("outside their own files: out/deliverables/report.json (added; set aside)");
+  });
+
+  test("driver without a result.json (an older verify) still returns its output", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "vmcp-driver-"));
+    const outcome = await handleDriver({ task_dir: dir, provider: "ollama", model: "qwen" }, deps({ run: async () => ok("done") }));
+    expect(outcome.text).toContain("done");
+    expect(outcome.structured).not.toHaveProperty("result");
+  });
+
   test("model-check parses JSON, reports a missing command, and a down server", async () => {
     const cases: Array<{ result: RunResult; includes: string; error: boolean }> = [
       { result: ok('{"provider":"ollama","model":"qwen"}\n'), includes: "ollama", error: false },

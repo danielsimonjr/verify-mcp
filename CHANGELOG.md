@@ -6,6 +6,19 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-10
+
+### Changed
+- The verify pin is 0.10.0.
+- `verify_workers` names the outcome of each rollout in its result text (`b01/r01: max-turns (60 s, 41 turns,
+  peak 28881)`) and repeats the harness warnings. A host that shows only the text of an error result no
+  longer loses which rollout failed and why.
+- `verify_driver` returns the driver's `result.json` (verify 0.10.0 or later) as `structured.result` and
+  states in its text which investigations left no record, the base (`none` means the deliverable was
+  built from the inputs), an invalid delivery, and any write an investigation made outside its own files.
+  Exit 0 says only that the run ended.
+
+
 ## [0.13.0] - 2026-10-10
 
 ### Added

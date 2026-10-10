@@ -297,8 +297,44 @@ export function handleDriver(raw: DriverInput, deps: Deps, progress?: ProgressCt
   const input = applyDefaultProfile(raw, deps.env, true);
   return withLaunch(deps, async (launch) => {
     const result = await invoke(deps, launch, "driver", driverArgv(input), driverTimeoutSeconds(input), progress);
-    return finish("driver", result, false);
+    return withDriverResult(finish("driver", result, false), input.task_dir);
   });
+}
+
+/**
+ * Adds what the driver wrote to `result.json` to its outcome. Exit 0 says only that the run ended: the
+ * file says which investigations left a record, which rollout was the base, whether the delivery is
+ * valid, and which files an investigation touched outside its own. An older verify writes no file, and
+ * then the outcome is unchanged.
+ */
+function withDriverResult(outcome: ToolOutcome, taskDir: string): ToolOutcome {
+  let record: Record<string, unknown> | undefined;
+  try {
+    record = asRecord(JSON.parse(readFileSync(resolve(taskDir, "result.json"), "utf8")));
+  } catch {
+    record = undefined;
+  }
+  if (!record) return outcome;
+  const lines: string[] = [];
+  const inv = asRecord(record.investigations) ?? {};
+  const missing = Object.entries(inv).filter(([, has]) => has !== true).map(([name]) => name);
+  if (missing.length) lines.push(`investigations without a record: ${missing.join(", ")}`);
+  if (typeof record.base === "string") {
+    lines.push(
+      record.base === "none"
+        ? "base none: no rollout was a usable start, so the deliverable was built from the inputs"
+        : `base ${record.base}`,
+    );
+  }
+  const delivery = asRecord(record.delivery);
+  if (delivery && delivery.valid === false) lines.push(`delivery not valid: ${String(delivery.reason ?? "no reason given")}`);
+  const scope = Array.isArray(record.scope) ? record.scope.map(String) : [];
+  if (scope.length) lines.push(`investigations wrote outside their own files: ${scope.join("; ")}`);
+  return {
+    ...outcome,
+    text: [outcome.text, ...lines].join("\n"),
+    structured: { ...(outcome.structured ?? {}), result: record },
+  };
 }
 
 /** Runs `veriharness runner`. A non-zero exit, a timeout or a cancel returns an error outcome. */
@@ -421,8 +457,26 @@ export function handleWorkers(raw: WorkersInput, deps: Deps, progress?: Progress
         : failed
           ? explain("workers", result)
           : "veriharness workers finished.";
+    // A host may show only the text of an error result, so the text carries the outcome of each rollout
+    // and the harness warnings (a compaction, failed tool calls, the item-tokens suggestion).
+    const rolloutLines = rollouts.map((r) => {
+      const facts = [
+        r.seconds !== undefined && `${r.seconds} s`,
+        r.turns !== undefined && `${r.turns} turns`,
+        r.peakContext !== undefined && `peak ${r.peakContext}`,
+        r.attempts !== undefined && Number(r.attempts) > 1 && `${r.attempts} attempts`,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      return `${String(r.batch ?? "?")}/${String(r.rollout)}: ${r.error ? String(r.error) : "complete"}${facts ? ` (${facts})` : ""}`;
+    });
+    const warnings = result.stderr
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith("workers: ") && !head.includes(l))
+      .slice(0, 20);
     return {
-      text: `${head}\nrollouts ${rollouts.length}: ${counts}`,
+      text: [head, `rollouts ${rollouts.length}: ${counts}`, ...rolloutLines, ...warnings].join("\n"),
       ...(failed ? { isError: true } : {}),
       structured: {
         command: "workers",
