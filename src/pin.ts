@@ -2,6 +2,6 @@
 export const VERIFY_PACKAGE = "@danielsimonjr/verify";
 
 /** The exact version of VERIFY_PACKAGE that verify-mcp pins. package.json names the same version. */
-export const VERIFY_VERSION = "0.12.1";
+export const VERIFY_VERSION = "0.12.2";
 
 export const VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;

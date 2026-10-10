@@ -2,7 +2,7 @@
   "name": "verify-mcp",
   "displayName": "verify",
   "description": "MCP server wrapping danielsimonjr/verify (veriharness).",
-  "version": "0.16.1",
+  "version": "0.16.2",
   "author": {
     "name": "danielsimonjr"
   },
