@@ -21977,7 +21977,8 @@ var batchInput = object({
   split: string2().regex(SPLIT_RULE, "split must be jsonl, blank-line or heading:REGEX").describe("How to split the items: jsonl (one item per line, id from its id field), blank-line (blocks between " + "blank lines), or heading:REGEX (an item starts at each matching line; the first capture group is the id)."),
   spec: string2().min(1).describe("The task file. Each batch gets it as spec/task.md."),
   out: string2().min(1).describe("The output folder. It must not exist or must be empty."),
-  shared: array(string2().min(1)).optional().describe("Files or folders every batch gets in workspace/. Each becomes --shared."),
+  shared: array(string2().min(1)).optional().describe("Files or folders every batch gets in workspace/, read whole: the budget counts them. Each becomes --shared."),
+  reference: array(string2().min(1)).optional().describe("Files or folders every batch gets in workspace/, only searched (a large CHANGELOG): the budget does not count them. Each becomes --reference. Needs verify 0.7.0."),
   prompt: string2().min(1).optional().describe("The worker prompt, copied to OUT/worker_prompt.md for verify_workers."),
   items_name: string2().min(1).optional().describe("File name of the items in workspace/. Default items.jsonl or items.md."),
   batch_tokens: number2().int().positive().optional().describe("The token budget of one batch. Give this or the worker model."),
@@ -22222,6 +22223,8 @@ function batchArgv(input) {
   const args = ["batch", "--items", input.items, "--split", input.split, "--spec", input.spec, "--out", input.out];
   for (const path of input.shared ?? [])
     args.push("--shared", path);
+  for (const path of input.reference ?? [])
+    args.push("--reference", path);
   if (input.prompt)
     args.push("--prompt", input.prompt);
   if (input.items_name)
@@ -22346,7 +22349,7 @@ function applyDefaultProfile(input, env, driver) {
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.6.0";
+var VERIFY_VERSION = "0.7.0";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -23134,7 +23137,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.10.0";
+var SERVER_VERSION = "0.11.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts

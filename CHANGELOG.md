@@ -6,6 +6,17 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-09
+
+### Added
+- `verify_batch` takes `reference`, passed as `--reference`: files every batch gets in `workspace/` that the worker only searches, so the budget does not count them.
+
+### Changed
+- The verify pin is 0.7.0, the first version with `veriharness batch --reference`.
+
+### Fixed
+- The README's `verify_batch` example passed the searched CHANGELOG as `shared`, which puts every batch over the budget. It now uses `reference`.
+
 ## [0.10.0] - 2026-10-09
 
 ### Added

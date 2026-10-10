@@ -74,6 +74,7 @@ describe("verify_batch", () => {
       spec: "task.md",
       out: "work",
       shared: ["CHANGELOG.md", "notes"],
+      reference: ["corpus.md", "docs"],
       prompt: "prompt.md",
       items_name: "rows.md",
       provider: "ollama",
@@ -93,6 +94,8 @@ describe("verify_batch", () => {
       "--out", "work",
       "--shared", "CHANGELOG.md",
       "--shared", "notes",
+      "--reference", "corpus.md",
+      "--reference", "docs",
       "--prompt", "prompt.md",
       "--items-name", "rows.md",
       "--provider", "ollama",
@@ -256,8 +259,8 @@ describe("verify_workers", () => {
 });
 
 describe("pin and model check", () => {
-  test("the pin is verify 0.6.0", () => {
-    expect(VERIFY_VERSION).toBe("0.6.0");
+  test("the pin is verify 0.7.0", () => {
+    expect(VERIFY_VERSION).toBe("0.7.0");
   });
 
   test("model check returns the window and its source", async () => {

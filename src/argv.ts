@@ -218,11 +218,12 @@ export function envDeriveTimeoutSeconds(input: EnvDeriveInput): number {
 /**
  * Builds `batch` with the four required options, then one flag for each option that `input` sets.
  *
- * `shared` adds one `--shared` flag per path.
+ * `shared` adds one `--shared` flag per path, and `reference` one `--reference` flag per path.
  */
 export function batchArgv(input: BatchInput): string[] {
   const args = ["batch", "--items", input.items, "--split", input.split, "--spec", input.spec, "--out", input.out];
   for (const path of input.shared ?? []) args.push("--shared", path);
+  for (const path of input.reference ?? []) args.push("--reference", path);
   if (input.prompt) args.push("--prompt", input.prompt);
   if (input.items_name) args.push("--items-name", input.items_name);
   if (input.batch_tokens !== undefined) args.push("--batch-tokens", String(input.batch_tokens));

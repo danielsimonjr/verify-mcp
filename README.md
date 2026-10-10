@@ -50,7 +50,7 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.6.0
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.7.0
   (`@danielsimonjr/verify`, the pinned version) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
@@ -273,7 +273,9 @@ server reports: a loaded Ollama model, then `num_ctx`, then llama.cpp's `n_ctx`.
 `batch_tokens`, or half the window of the worker model (`provider` and `model`). Give one of the
 two, not both. `split` is `jsonl`, `blank-line` or `heading:REGEX`. The result holds
 `manifest.json`: the budget, the window and its source, and the estimate of each batch. The
-default model profile applies when the call sets no `batch_tokens`.
+default model profile applies when the call sets no `batch_tokens`. `shared` files are read whole,
+so the estimate counts them. `reference` files (verify 0.7.0 or later) are only searched, such as a
+large CHANGELOG, so the estimate does not count them.
 
 `verify_workers` runs `count` rollouts (default 3) on each batch of that folder. Each rollout runs
 in a temp copy, and its record goes to `rollouts/<rollout>/trajectory/worker.json`. A local model
@@ -287,7 +289,7 @@ has a worked example.
 
 ```json
 { "items": "TODO-closed.md", "split": "heading:^### TODO line (\\d+)$", "spec": "task.md",
-  "shared": ["CHANGELOG.md"], "prompt": "worker_prompt.md", "out": "work",
+  "reference": ["CHANGELOG.md"], "prompt": "worker_prompt.md", "out": "work",
   "provider": "ollama", "model": "qwen3.5:9b-64k", "context_size": "auto" }
 ```
 

@@ -287,7 +287,16 @@ export const batchInput = z
       ),
     spec: z.string().min(1).describe("The task file. Each batch gets it as spec/task.md."),
     out: z.string().min(1).describe("The output folder. It must not exist or must be empty."),
-    shared: z.array(z.string().min(1)).optional().describe("Files or folders every batch gets in workspace/. Each becomes --shared."),
+    shared: z
+      .array(z.string().min(1))
+      .optional()
+      .describe("Files or folders every batch gets in workspace/, read whole: the budget counts them. Each becomes --shared."),
+    reference: z
+      .array(z.string().min(1))
+      .optional()
+      .describe(
+        "Files or folders every batch gets in workspace/, only searched (a large CHANGELOG): the budget does not count them. Each becomes --reference. Needs verify 0.7.0.",
+      ),
     prompt: z.string().min(1).optional().describe("The worker prompt, copied to OUT/worker_prompt.md for verify_workers."),
     items_name: z.string().min(1).optional().describe("File name of the items in workspace/. Default items.jsonl or items.md."),
     batch_tokens: z.number().int().positive().optional().describe("The token budget of one batch. Give this or the worker model."),
