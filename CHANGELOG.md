@@ -6,6 +6,15 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-10
+
+### Changed
+- The verify pin is 0.11.0.
+- `verify_driver` text lists the items the reviewer left open (`result.json` `openItems`): the delivered file
+  holds a verdict for each of them.
+- `verify_workers` text shows `N s in all` for a retried rollout (`worker.json` `totalSeconds`), beside the
+  seconds of the last attempt.
+
 ## [0.14.1] - 2026-10-10
 
 ### Changed

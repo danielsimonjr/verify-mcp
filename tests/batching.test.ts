@@ -292,6 +292,18 @@ describe("verify_workers", () => {
     expect(outcome.text).toContain("workers: note on stderr");
   });
 
+  test("a retried rollout shows the time of all its attempts, not only the last", async () => {
+    const lines = [
+      '{"batch":"b01","rollout":"r01","exit":0,"seconds":17,"totalSeconds":95,"attempts":3,"error":"schema"}',
+      '{"batch":"b01","rollout":"r02","exit":0,"seconds":20,"totalSeconds":20,"attempts":1,"error":null}',
+      '{"summary":{"complete":1,"errors":1,"skipped":0}}',
+    ];
+    const runner: CommandRunner = { run: async () => result(1, lines.join("\n") + "\n") };
+    const outcome = await handleWorkers(workersInput.parse({ dir: "w", provider: "ollama", model: "m" }), deps(runner));
+    expect(outcome.text).toContain("b01/r01: schema (17 s, 95 s in all, 3 attempts)");
+    expect(outcome.text).toContain("b01/r02: complete (20 s)");
+  });
+
   test("exit 75 says the usage limit stopped the run", async () => {
     const runner: CommandRunner = {
       async run() {
@@ -305,8 +317,8 @@ describe("verify_workers", () => {
 });
 
 describe("pin and model check", () => {
-  test("the pin is verify 0.10.1", () => {
-    expect(VERIFY_VERSION).toBe("0.10.1");
+  test("the pin is verify 0.11.0", () => {
+    expect(VERIFY_VERSION).toBe("0.11.0");
   });
 
   test("model check returns the window and its source", async () => {

@@ -326,6 +326,16 @@ function withDriverResult(outcome: ToolOutcome, taskDir: string): ToolOutcome {
         : `base ${record.base}`,
     );
   }
+  // The delivered file holds a verdict for each open item; the list says which verdicts are in doubt.
+  const openItems = Array.isArray(record.openItems) ? record.openItems : [];
+  if (openItems.length) {
+    const names = openItems.slice(0, 10).map((o) => {
+      const item = asRecord(o)?.item;
+      return typeof item === "string" ? item : JSON.stringify(o);
+    });
+    const more = openItems.length > names.length ? `; and ${openItems.length - names.length} more` : "";
+    lines.push(`open items (the file holds a verdict for each): ${names.join("; ")}${more}`);
+  }
   const delivery = asRecord(record.delivery);
   if (delivery && delivery.valid === false) lines.push(`delivery not valid: ${String(delivery.reason ?? "no reason given")}`);
   const scope = Array.isArray(record.scope) ? record.scope.map(String) : [];
@@ -462,6 +472,8 @@ export function handleWorkers(raw: WorkersInput, deps: Deps, progress?: Progress
     const rolloutLines = rollouts.map((r) => {
       const facts = [
         r.seconds !== undefined && `${r.seconds} s`,
+        // `seconds` is the last attempt; a retried rollout cost more than that.
+        r.totalSeconds !== undefined && Number(r.totalSeconds) > Number(r.seconds ?? 0) && `${r.totalSeconds} s in all`,
         r.turns !== undefined && `${r.turns} turns`,
         r.peakContext !== undefined && `peak ${r.peakContext}`,
         r.attempts !== undefined && Number(r.attempts) > 1 && `${r.attempts} attempts`,

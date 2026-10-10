@@ -22376,7 +22376,7 @@ function applyBatchProfile(input, env) {
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.10.1";
+var VERIFY_VERSION = "0.11.0";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -23033,6 +23033,15 @@ function withDriverResult(outcome, taskDir) {
   if (typeof record.base === "string") {
     lines.push(record.base === "none" ? "base none: no rollout was a usable start, so the deliverable was built from the inputs" : `base ${record.base}`);
   }
+  const openItems = Array.isArray(record.openItems) ? record.openItems : [];
+  if (openItems.length) {
+    const names = openItems.slice(0, 10).map((o) => {
+      const item = asRecord(o)?.item;
+      return typeof item === "string" ? item : JSON.stringify(o);
+    });
+    const more = openItems.length > names.length ? `; and ${openItems.length - names.length} more` : "";
+    lines.push(`open items (the file holds a verdict for each): ${names.join("; ")}${more}`);
+  }
   const delivery = asRecord(record.delivery);
   if (delivery && delivery.valid === false)
     lines.push(`delivery not valid: ${String(delivery.reason ?? "no reason given")}`);
@@ -23129,6 +23138,7 @@ function handleWorkers(raw, deps, progress) {
     const rolloutLines = rollouts.map((r) => {
       const facts = [
         r.seconds !== undefined && `${r.seconds} s`,
+        r.totalSeconds !== undefined && Number(r.totalSeconds) > Number(r.seconds ?? 0) && `${r.totalSeconds} s in all`,
         r.turns !== undefined && `${r.turns} turns`,
         r.peakContext !== undefined && `peak ${r.peakContext}`,
         r.attempts !== undefined && Number(r.attempts) > 1 && `${r.attempts} attempts`
@@ -23206,7 +23216,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.14.1";
+var SERVER_VERSION = "0.15.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts

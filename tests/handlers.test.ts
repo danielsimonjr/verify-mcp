@@ -87,6 +87,24 @@ describe("handlers", () => {
     expect(outcome.text).toContain("outside their own files: out/deliverables/report.json (added; set aside)");
   });
 
+  test("driver names the items the reviewer left open", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "vmcp-driver-"));
+    writeFileSync(
+      join(dir, "result.json"),
+      JSON.stringify({
+        exit: 0,
+        investigations: { elim: true, fals: true },
+        scope: [],
+        base: "r01",
+        work: 2,
+        open: 2,
+        openItems: [{ item: "row 2558 (windows-mcp skew)", readings: ["LOGGED", "MISSING"] }, { item: "row 2528" }],
+      }),
+    );
+    const outcome = await handleDriver({ task_dir: dir, provider: "ollama", model: "qwen" }, deps({ run: async () => ok("done") }));
+    expect(outcome.text).toContain("open items (the file holds a verdict for each): row 2558 (windows-mcp skew); row 2528");
+  });
+
   test("driver without a result.json (an older verify) still returns its output", async () => {
     const dir = mkdtempSync(join(tmpdir(), "vmcp-driver-"));
     const outcome = await handleDriver({ task_dir: dir, provider: "ollama", model: "qwen" }, deps({ run: async () => ok("done") }));
