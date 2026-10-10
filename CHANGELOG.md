@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.3] - 2026-10-10
+
+### Changed
+- The verify pin is 0.12.3: `verify_workers` names an `--item-tokens` value only for a peak that is past
+  the budget of the manifest, since a rebatch with a smaller value gave the same split.
+
 ## [0.16.2] - 2026-10-10
 
 ### Changed
