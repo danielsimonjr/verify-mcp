@@ -20,7 +20,8 @@ describe("runProcess", () => {
     expect(result.stdout).toContain("hello-out");
     expect(result.stderr).toContain("hello-err");
     expect(result.timedOut).toBe(false);
-  });
+    // The process gets 10 s above; bun's own 5 s test timeout would cut a cold start (Defender scan) short.
+  }, 30_000);
 
   test("kills the process group on timeout", async () => {
     const lines: string[] = [];

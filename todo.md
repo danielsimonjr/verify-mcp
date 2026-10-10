@@ -10,6 +10,8 @@ Open work for this repository. Check an item off when it lands, in the same comm
 
 ## Quality gates
 
+- [x] Intermittent suite failure right after `bun install`: the two cold-start tests without an explicit timeout now carry one (30 s). The failure did not reproduce in 12 parallel runs, so the cause is a named variance source (cold start under disk scan against bun's 5 s default), not a measured one.
+
 - [x] Doc comments: `repo-tools docs check src` reported 63 exported symbols without a doc comment (argv.ts 19, handlers.ts 16, schemas.ts 11, resolve.ts 7, results.ts 6, run.ts 3, http.ts 1). It now passes with no MUST or SHOULD issue.
 
 ## Batching and workers

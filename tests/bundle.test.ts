@@ -21,7 +21,8 @@ describe("plugin/", () => {
       const committed = readFileSync(join(ROOT, "plugin", rel), "utf8");
       expect(lf(committed) === lf(text), `plugin/${rel} is stale`).toBe(true);
     }
-  });
+    // A cold esbuild load right after `bun install` can pass bun's 5 s test timeout on a scanned disk.
+  }, 30_000);
 
   test("the bundle runs with no node_modules in reach and lists every tool", async () => {
     // Copy the bundle out of the repository: run in place, module resolution would walk up to
