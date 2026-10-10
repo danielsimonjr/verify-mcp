@@ -6,6 +6,17 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-10
+
+### Added
+- `verify_workers` takes `schema`, `retries`, `nudge_timeout` and `allow_compaction`. They pass
+  `--schema`, `--retries`, `--nudge-timeout` and `--allow-compaction` to verify 0.9.0. A deliverable
+  that does not fit the schema ends as `schema`; a stopped pi worker gets one nudge for its answer;
+  a rollout with a compaction ends as `compacted` unless `allow_compaction` is true.
+
+### Changed
+- The verify pin is 0.9.0.
+
 ## [0.12.0] - 2026-10-10
 
 ### Added

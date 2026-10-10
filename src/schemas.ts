@@ -340,6 +340,10 @@ export const workersInput = z
       .positive()
       .optional()
       .describe("Most assistant turns for one worker, passed as --max-turns. A worker past it stops with error max-turns. Default: no cap."),
+    schema: z.string().min(1).optional().describe("A JSON Schema file, passed as --schema. A deliverable that parses but does not fit it ends as error schema (verify 0.9.0 or later)."),
+    retries: z.number().int().nonnegative().optional().describe("Extra tries for a rollout that ends with no-result, no-json, thinking-only, length or schema, passed as --retries (verify 0.9.0 or later)."),
+    nudge_timeout: z.number().int().nonnegative().optional().describe("Seconds for the one nudge that asks a stopped pi worker for its answer, passed as --nudge-timeout. 0 turns it off. Local models only (verify 0.9.0 or later)."),
+    allow_compaction: z.boolean().optional().describe("true accepts a rollout whose agent compacted its context, passed as --allow-compaction. Default: such a rollout ends as compacted (verify 0.9.0 or later)."),
     max_parallel: z.number().int().positive().optional().describe("Workers at once. Default: count for a local model, the lane cap for Claude Code."),
     env: z.literal("none").optional().describe("Execution environment. Claude Code workers need none."),
     temperature: localModelShape.temperature,
