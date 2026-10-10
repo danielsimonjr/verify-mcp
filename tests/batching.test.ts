@@ -160,6 +160,28 @@ describe("verify_batch", () => {
     await handleBatch(batchInput.parse({ items: "i", split: "jsonl", spec: "s", out: "o", batch_tokens: 900 }), deps(runner, "/work", profile));
     expect(calls[1]!.args).not.toContain("--model");
   });
+
+  test("the profile sets the per-item and fixed token costs, a call overrides them, and nothing is set without them", async () => {
+    const calls: RunRequest[] = [];
+    const runner: CommandRunner = {
+      async run(req) {
+        calls.push(req);
+        return result(2, "", "error: bad\n");
+      },
+    };
+    const base = { items: "i", split: "jsonl", spec: "s", out: "o", batch_tokens: 900 } as const;
+    const profile = { VERIFY_MCP_ITEM_TOKENS: "1500", VERIFY_MCP_OVERHEAD_TOKENS: "1800" };
+    await handleBatch(batchInput.parse(base), deps(runner, "/work", profile));
+    const filled = calls[0]!.args;
+    expect(filled[filled.indexOf("--item-tokens") + 1]).toBe("1500");
+    expect(filled[filled.indexOf("--overhead-tokens") + 1]).toBe("1800");
+    await handleBatch(batchInput.parse({ ...base, item_tokens: 0 }), deps(runner, "/work", profile));
+    const own = calls[1]!.args;
+    expect(own[own.indexOf("--item-tokens") + 1]).toBe("0");
+    await handleBatch(batchInput.parse(base), deps(runner, "/work", {}));
+    expect(calls[2]!.args).not.toContain("--item-tokens");
+    expect(calls[2]!.args).not.toContain("--overhead-tokens");
+  });
 });
 
 describe("verify_workers", () => {
@@ -259,8 +281,8 @@ describe("verify_workers", () => {
 });
 
 describe("pin and model check", () => {
-  test("the pin is verify 0.7.0", () => {
-    expect(VERIFY_VERSION).toBe("0.7.0");
+  test("the pin is verify 0.8.0", () => {
+    expect(VERIFY_VERSION).toBe("0.8.0");
   });
 
   test("model check returns the window and its source", async () => {

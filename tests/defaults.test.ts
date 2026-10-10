@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { driverArgv } from "../src/argv.ts";
-import { applyDefaultProfile, DEFAULT_PROFILE_KEYS, type ProfileFields } from "../src/defaults.ts";
+import { applyBatchProfile, applyDefaultProfile, DEFAULT_PROFILE_KEYS, type ProfileFields } from "../src/defaults.ts";
 import { handleDriver, handleModelCheck, type CommandRunner, type Deps } from "../src/handlers.ts";
 import type { RunRequest, RunResult } from "../src/run.ts";
 
@@ -16,6 +16,8 @@ const PROFILE = {
   VERIFY_MCP_REQUEST_TIMEOUT: "600",
   VERIFY_MCP_NUDGE_TIMEOUT: "900",
 };
+
+const BATCH_PROFILE = { VERIFY_MCP_ITEM_TOKENS: "1500", VERIFY_MCP_OVERHEAD_TOKENS: "1800" };
 
 type Input = ProfileFields & { task_dir?: string };
 const apply = (input: Input, env: NodeJS.ProcessEnv, withEnv: boolean): Input => applyDefaultProfile<Input>(input, env, withEnv);
@@ -82,8 +84,31 @@ describe("applyDefaultProfile", () => {
     expect(apply({}, PROFILE, false).env).toBeUndefined();
   });
 
-  test("lists the nine env keys", () => {
-    expect([...DEFAULT_PROFILE_KEYS] as string[]).toEqual(Object.keys(PROFILE));
+  test("lists every env key", () => {
+    expect([...DEFAULT_PROFILE_KEYS] as string[]).toEqual([...Object.keys(PROFILE), ...Object.keys(BATCH_PROFILE)]);
+  });
+});
+
+describe("applyBatchProfile", () => {
+  const fill = (input: Record<string, unknown>, env: NodeJS.ProcessEnv) => applyBatchProfile(input as never, env) as Record<string, unknown>;
+
+  test("fills the per-item and fixed token costs a call omits, with no model named", () => {
+    expect(fill({ items: "i" }, BATCH_PROFILE)).toEqual({ items: "i", item_tokens: 1500, overhead_tokens: 1800 });
+  });
+
+  test("a value in the call wins, including 0", () => {
+    expect(fill({ item_tokens: 0, overhead_tokens: 7 }, BATCH_PROFILE)).toEqual({ item_tokens: 0, overhead_tokens: 7 });
+  });
+
+  test("sets nothing when the profile has no value, or a value that is not a whole number of tokens", () => {
+    expect(fill({ items: "i" }, {})).toEqual({ items: "i" });
+    const bad = { VERIFY_MCP_ITEM_TOKENS: "-5", VERIFY_MCP_OVERHEAD_TOKENS: "1.5" };
+    expect(fill({ items: "i" }, bad)).toEqual({ items: "i" });
+    expect(fill({ items: "i" }, { VERIFY_MCP_ITEM_TOKENS: "abc" })).toEqual({ items: "i" });
+  });
+
+  test("0 is a valid profile value: it names the free-item estimate on purpose", () => {
+    expect(fill({}, { VERIFY_MCP_ITEM_TOKENS: "0" })).toEqual({ item_tokens: 0 });
   });
 });
 

@@ -308,7 +308,7 @@ export const batchInput = z
     ),
     chars_per_token: z.number().positive().optional().describe("Characters per token in the estimate. Verify's default is 3.6."),
     overhead_tokens: z.number().int().nonnegative().optional().describe("Tokens each batch costs beyond its text. Verify's default is 2000."),
-    item_tokens: z.number().int().nonnegative().optional().describe("Tokens of output each item adds. Verify's default is 0."),
+    item_tokens: z.number().int().nonnegative().optional().describe("Tokens one item adds to a worker's context: its reads, searches and output. Verify's default is 0, which counts the start text only. verify_workers reports the value that would have covered a batch. VERIFY_MCP_ITEM_TOKENS sets a default for the server."),
     max_items: z.number().int().positive().optional().describe("Most items in one batch."),
     timeout_seconds: timeoutSeconds,
   })

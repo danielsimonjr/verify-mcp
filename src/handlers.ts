@@ -26,7 +26,7 @@ import {
   workersArgv,
   workersTimeoutSeconds,
 } from "./argv.ts";
-import { applyDefaultProfile } from "./defaults.ts";
+import { applyBatchProfile, applyDefaultProfile } from "./defaults.ts";
 import { VERIFY_SPEC, VERIFY_VERSION } from "./pin.ts";
 import { VerifyNotInstalledError, resolveVerifyLaunch, type VerifyLaunch } from "./resolve.ts";
 import { ResultPathError, DEFAULT_MAX_BYTES, listRuns, readArtifact, resultBase } from "./results.ts";
@@ -363,7 +363,8 @@ export function handleEnvDerive(input: EnvDeriveInput, deps: Deps, progress?: Pr
  * budget or a model, not both.
  */
 export function handleBatch(raw: BatchInput, deps: Deps, progress?: ProgressCtx): Promise<ToolOutcome> {
-  const input = raw.batch_tokens === undefined ? applyDefaultProfile(raw, deps.env, false) : raw;
+  const sized = applyBatchProfile(raw, deps.env);
+  const input = sized.batch_tokens === undefined ? applyDefaultProfile(sized, deps.env, false) : sized;
   return withLaunch(deps, async (launch) => {
     const result = await invoke(deps, launch, "batch", batchArgv(input), batchTimeoutSeconds(input), progress);
     const outcome = finish("batch", result, false);

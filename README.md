@@ -50,7 +50,7 @@ reports progress while it runs, and returns its output.
 ## Requirements
 
 - [Bun](https://bun.sh) 1.1 or later on `PATH`. CI uses Bun 1.4.2.
-- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.7.0
+- A checkout of [danielsimonjr/verify](https://github.com/danielsimonjr/verify) at version 0.8.0
   (`@danielsimonjr/verify`, the pinned version) or later, with its dependencies installed (`bun install`). The Claude Code
   plugin expects it at `~/Github/verify`. The Claude Code provider needs `102894a` or later; a
   checkout from `756bc2b` up to that commit runs local models only.
@@ -395,6 +395,7 @@ characters of stdout and of stderr.
 | `VERIFY_MCP_BASE_URL`, `VERIFY_MCP_CONTEXT_SIZE` | The default server URL and context size. A call that sets its own value keeps it |
 | `VERIFY_MCP_ENV` | The default execution environment of `verify_driver` (`none` on Windows) |
 | `VERIFY_MCP_THINKING`, `VERIFY_MCP_NUDGE_TIMEOUT` | The default `thinking` level and `nudge_timeout` seconds of `verify_driver` |
+| `VERIFY_MCP_ITEM_TOKENS`, `VERIFY_MCP_OVERHEAD_TOKENS` | The default `item_tokens` and `overhead_tokens` of `verify_batch`: what one item costs a worker in reads and searches, and the fixed cost of its system prompt and tools. Verify sets no default for the item cost, because it depends on the task, the tools and the model. Measure it: `verify_workers` reports the `--item-tokens` value that would have covered a batch when the measured peak passes the estimate. A call that sets its own value keeps it. These apply whether or not the call names a model |
 | `VERIFY_MCP_MAX_TOKENS`, `VERIFY_MCP_REQUEST_TIMEOUT` | The default `max_tokens` and `request_timeout` seconds of `verify_driver` and `verify_model_check` |
 
 The plugin ships no default model. Its `.mcp.json` passes each of these variables through, empty when unset, so a machine sets its own default in the `env` block of its Claude Code `settings.json`. Verify refuses a model that does not report a `num_ctx` of at least the context size, so a default Ollama model needs a `num_ctx` set, in a variant made with `ollama create` or by loading the model at that size. A call that names a provider or a model ignores the whole default.

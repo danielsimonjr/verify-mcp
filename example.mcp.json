@@ -14,7 +14,9 @@
         "VERIFY_MCP_THINKING": "low",
         "VERIFY_MCP_MAX_TOKENS": "16384",
         "VERIFY_MCP_REQUEST_TIMEOUT": "600",
-        "VERIFY_MCP_NUDGE_TIMEOUT": "900"
+        "VERIFY_MCP_NUDGE_TIMEOUT": "900",
+        "VERIFY_MCP_ITEM_TOKENS": "1500",
+        "VERIFY_MCP_OVERHEAD_TOKENS": "2000"
       }
     }
   }

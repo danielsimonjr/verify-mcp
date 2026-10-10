@@ -6,6 +6,21 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-10
+
+### Added
+- `VERIFY_MCP_ITEM_TOKENS` and `VERIFY_MCP_OVERHEAD_TOKENS` set the default `item_tokens` and
+  `overhead_tokens` of `verify_batch`, in the server `env` of `settings.json` or `.mcp.json`. What one
+  item costs a worker depends on the task, the tools and the model, so a deployment sets its own
+  measured value and no default is built in. A call that sets its own value keeps it. The variables
+  apply whether or not the call names a model.
+
+### Changed
+- The verify pin is 0.8.0. A `verify_workers` rollout record now also has `estTokens`, the batch
+  estimate from `manifest.json`, and verify writes a progress line when the measured `peakContext` is
+  above it. The line names the `--item-tokens` value that would have covered the batch. verify-mcp
+  passes the record through unchanged.
+
 ## [0.11.0] - 2026-10-09
 
 ### Added

@@ -21988,7 +21988,7 @@ var batchInput = object({
   context_size: serverContextSize.describe("The worker model's window: a whole number above 4096, or auto. Omit for auto. The budget is half the window."),
   chars_per_token: number2().positive().optional().describe("Characters per token in the estimate. Verify's default is 3.6."),
   overhead_tokens: number2().int().nonnegative().optional().describe("Tokens each batch costs beyond its text. Verify's default is 2000."),
-  item_tokens: number2().int().nonnegative().optional().describe("Tokens of output each item adds. Verify's default is 0."),
+  item_tokens: number2().int().nonnegative().optional().describe("Tokens one item adds to a worker's context: its reads, searches and output. Verify's default is 0, which counts the start text only. verify_workers reports the value that would have covered a batch. VERIFY_MCP_ITEM_TOKENS sets a default for the server."),
   max_items: number2().int().positive().optional().describe("Most items in one batch."),
   timeout_seconds: timeoutSeconds
 }).strict().superRefine((input, ctx) => {
@@ -22346,10 +22346,25 @@ function applyDefaultProfile(input, env, driver) {
     out.nudge_timeout = nudge;
   return out;
 }
+function wholeNumber(value) {
+  const raw = text(value);
+  const n = raw === undefined ? NaN : Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+}
+function applyBatchProfile(input, env) {
+  const out = { ...input };
+  const item = wholeNumber(env?.VERIFY_MCP_ITEM_TOKENS);
+  if (out.item_tokens === undefined && item !== undefined)
+    out.item_tokens = item;
+  const overhead = wholeNumber(env?.VERIFY_MCP_OVERHEAD_TOKENS);
+  if (out.overhead_tokens === undefined && overhead !== undefined)
+    out.overhead_tokens = overhead;
+  return out;
+}
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.7.0";
+var VERIFY_VERSION = "0.8.0";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -23020,7 +23035,8 @@ function handleEnvDerive(input, deps, progress) {
   });
 }
 function handleBatch(raw, deps, progress) {
-  const input = raw.batch_tokens === undefined ? applyDefaultProfile(raw, deps.env, false) : raw;
+  const sized = applyBatchProfile(raw, deps.env);
+  const input = sized.batch_tokens === undefined ? applyDefaultProfile(sized, deps.env, false) : sized;
   return withLaunch(deps, async (launch) => {
     const result = await invoke2(deps, launch, "batch", batchArgv(input), batchTimeoutSeconds(input), progress);
     const outcome = finish("batch", result, false);
@@ -23137,7 +23153,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.11.0";
+var SERVER_VERSION = "0.12.0";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts

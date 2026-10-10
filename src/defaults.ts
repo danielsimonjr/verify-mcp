@@ -11,6 +11,8 @@ export const DEFAULT_PROFILE_KEYS = [
   "VERIFY_MCP_MAX_TOKENS",
   "VERIFY_MCP_REQUEST_TIMEOUT",
   "VERIFY_MCP_NUDGE_TIMEOUT",
+  "VERIFY_MCP_ITEM_TOKENS",
+  "VERIFY_MCP_OVERHEAD_TOKENS",
 ] as const;
 
 /** The input fields that the default profile can fill. */
@@ -74,5 +76,36 @@ export function applyDefaultProfile<T extends ProfileFields>(
   if (out.thinking === undefined && thinking) out.thinking = thinking;
   const nudge = positive(env?.VERIFY_MCP_NUDGE_TIMEOUT);
   if (out.nudge_timeout === undefined && nudge !== undefined) out.nudge_timeout = nudge;
+  return out;
+}
+
+/** The batch sizing fields that the default profile can fill. */
+export interface BatchProfileFields {
+  item_tokens?: number;
+  overhead_tokens?: number;
+}
+
+function wholeNumber(value: string | undefined): number | undefined {
+  const raw = text(value);
+  const n = raw === undefined ? NaN : Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+}
+
+/**
+ * Fills `item_tokens` and `overhead_tokens` from `VERIFY_MCP_ITEM_TOKENS` and
+ * `VERIFY_MCP_OVERHEAD_TOKENS` when the call omits them.
+ *
+ * What one item costs a worker depends on the task, the tools and the model, so verify sets no
+ * default for it. A deployment that knows its own cost sets it here, in its own settings or
+ * `.mcp.json`, and a call can still override it. A value that is not a whole number of tokens is
+ * ignored. Unlike the model profile, this applies whether or not the call names a model: the cost
+ * of an item does not depend on which model the call names.
+ */
+export function applyBatchProfile<T extends BatchProfileFields>(input: T, env: NodeJS.ProcessEnv | undefined): T {
+  const out: T = { ...input };
+  const item = wholeNumber(env?.VERIFY_MCP_ITEM_TOKENS);
+  if (out.item_tokens === undefined && item !== undefined) out.item_tokens = item;
+  const overhead = wholeNumber(env?.VERIFY_MCP_OVERHEAD_TOKENS);
+  if (out.overhead_tokens === undefined && overhead !== undefined) out.overhead_tokens = overhead;
   return out;
 }
