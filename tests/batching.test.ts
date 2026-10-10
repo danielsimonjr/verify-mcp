@@ -146,6 +146,24 @@ describe("verify_batch", () => {
     }
   });
 
+  test("a workspace file that the spec names and no batch holds is in the text", async () => {
+    const root = mkdtempSync(join(tmpdir(), "vmcp-batch-"));
+    try {
+      const manifest = { budget: 32768, batches: [{ name: "b01" }], missing: [{ file: "rows.md", namedBy: "spec/task.md" }] };
+      mkdirSync(join(root, "work"));
+      writeFileSync(join(root, "work", "manifest.json"), JSON.stringify(manifest));
+      const runner: CommandRunner = { run: async () => result(0, "", "batch: 1 batch\n") };
+      const outcome = await handleBatch(
+        batchInput.parse({ items: "i", split: "jsonl", spec: "s", out: "work", provider: "ollama", model: "m" }),
+        deps(runner, root),
+      );
+      expect(outcome.isError).toBeUndefined();
+      expect(outcome.text).toContain("workspace files named but not held by any batch: rows.md (spec/task.md); items_name sets the items file");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("the default model profile fills a batch that names no budget and no model", async () => {
     const calls: RunRequest[] = [];
     const runner: CommandRunner = {
@@ -317,8 +335,8 @@ describe("verify_workers", () => {
 });
 
 describe("pin and model check", () => {
-  test("the pin is verify 0.11.0", () => {
-    expect(VERIFY_VERSION).toBe("0.11.0");
+  test("the pin is verify 0.12.0", () => {
+    expect(VERIFY_VERSION).toBe("0.12.0");
   });
 
   test("model check returns the window and its source", async () => {

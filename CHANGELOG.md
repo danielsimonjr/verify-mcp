@@ -6,6 +6,13 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-10
+
+### Changed
+- The verify pin is 0.12.0.
+- `verify_batch` text names each `workspace/<file>` that the spec or the worker prompt names and no batch
+  holds (`manifest.json` `missing`), with `items_name` as the usual fix.
+
 ## [0.15.0] - 2026-10-10
 
 ### Changed

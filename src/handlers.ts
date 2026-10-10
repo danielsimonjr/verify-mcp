@@ -419,7 +419,18 @@ export function handleBatch(raw: BatchInput, deps: Deps, progress?: ProgressCtx)
     const path = resolve(launch.cwd ?? process.cwd(), input.out, "manifest.json");
     try {
       const manifest = JSON.parse(readFileSync(path, "utf8")) as unknown;
-      return { text: `${outcome.text}\nmanifest ${path}`, structured: { ...outcome.structured, manifestPath: path, manifest } };
+      // A task that reads a file the batches do not hold fails in the workers, not here; say it now.
+      const missing = asRecord(manifest)?.missing;
+      const named = Array.isArray(missing)
+        ? missing.map((m) => `${String(asRecord(m)?.file)} (${String(asRecord(m)?.namedBy)})`)
+        : [];
+      const warn = named.length
+        ? `\nworkspace files named but not held by any batch: ${named.join("; ")}; items_name sets the items file`
+        : "";
+      return {
+        text: `${outcome.text}${warn}\nmanifest ${path}`,
+        structured: { ...outcome.structured, manifestPath: path, manifest },
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { text: `${outcome.text}\nmanifest ${path} could not be read: ${message}`, structured: outcome.structured };
