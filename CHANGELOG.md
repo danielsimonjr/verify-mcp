@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-10-10
+
+### Changed
+- The verify pin is 0.12.1: the `workers` warning about failed tool calls names the class of error
+  (`toolErrorKinds`) and no longer says the worker reads missing paths when it sent no arguments.
+
 ### Fixed
 - Two tests that start a process cold (`captures stdout and stderr`, and the fresh-build check of the
   committed bundle) now carry an explicit 30 s test timeout. Bun's default of 5 s cut them short on a
