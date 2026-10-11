@@ -1,6 +1,6 @@
 {
   "name": "verify-mcp",
-  "version": "0.16.3",
+  "version": "0.16.4",
   "description": "MCP server wrapping danielsimonjr/verify (veriharness).",
   "skills": "./skills/",
   "mcpServers": "./mcp.json"

@@ -335,8 +335,8 @@ describe("verify_workers", () => {
 });
 
 describe("pin and model check", () => {
-  test("the pin is verify 0.12.3", () => {
-    expect(VERIFY_VERSION).toBe("0.12.3");
+  test("the pin is verify 0.12.4", () => {
+    expect(VERIFY_VERSION).toBe("0.12.4");
   });
 
   test("model check returns the window and its source", async () => {

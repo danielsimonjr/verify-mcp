@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.4] - 2026-10-10
+
+### Changed
+- The pinned `verify` is 0.12.4. `verify_model_check`, `verify_batch`, `verify_workers` and `verify_driver` now
+  report the digest and quantization of a local model, so a re-created tag shows in the records.
+
 ## [0.16.3] - 2026-10-10
 
 ### Changed
