@@ -6,6 +6,16 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.6] - 2026-10-11
+
+### Added
+- `verify_workers` takes `ids` (ARRAY.FIELD, passed as `--ids`). A report that fits the schema and covers
+  other rows than its batch ends as error `ids`, is sent back once, and is retried by `retries`.
+
+### Changed
+- The pin moves to verify 0.12.9. A pi worker that made no tool call ends as the new error
+  `no-tool-calls` instead of complete, and the schema is in the worker charter.
+
 ## [0.16.5] - 2026-10-11
 
 ### Changed

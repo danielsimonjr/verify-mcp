@@ -218,6 +218,7 @@ describe("verify_workers", () => {
       timeout: 1800,
       max_turns: 25,
       schema: "report.schema.json",
+      ids: "rows.line",
       retries: 2,
       nudge_timeout: 120,
       allow_compaction: true,
@@ -242,6 +243,7 @@ describe("verify_workers", () => {
       "--timeout", "1800",
       "--max-turns", "25",
       "--schema", "report.schema.json",
+      "--ids", "rows.line",
       "--retries", "2",
       "--nudge-timeout", "120",
       "--allow-compaction",
@@ -271,6 +273,15 @@ describe("verify_workers", () => {
     }
     expect(workersArgv(workersInput.parse({ ...base, nudge_timeout: 0 }))).toContain("0");
     expect(workersArgv(workersInput.parse({ ...base, allow_compaction: false }))).not.toContain("--allow-compaction");
+  });
+
+  test("ids is ARRAY.FIELD: two names with one dot between them", () => {
+    const base = { dir: "w", provider: "p", model: "m" };
+    expect(workersInput.safeParse({ ...base, ids: "rows.line" }).success).toBe(true);
+    for (const bad of ["rows", "rows.", ".line", "a.b.c", "rows line", ""]) {
+      expect(workersInput.safeParse({ ...base, ids: bad }).success).toBe(false);
+    }
+    expect(workersArgv(workersInput.parse(base))).not.toContain("--ids");
   });
 
   test("the schema takes env none only", () => {
@@ -335,8 +346,8 @@ describe("verify_workers", () => {
 });
 
 describe("pin and model check", () => {
-  test("the pin is verify 0.12.5", () => {
-    expect(VERIFY_VERSION).toBe("0.12.5");
+  test("the pin is verify 0.12.9", () => {
+    expect(VERIFY_VERSION).toBe("0.12.9");
   });
 
   test("model check returns the window and its source", async () => {

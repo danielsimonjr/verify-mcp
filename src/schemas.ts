@@ -341,7 +341,14 @@ export const workersInput = z
       .optional()
       .describe("Most assistant turns for one worker, passed as --max-turns. A worker past it stops with error max-turns. Default: no cap."),
     schema: z.string().min(1).optional().describe("A JSON Schema file, passed as --schema. A deliverable that parses but does not fit it ends as error schema (verify 0.9.0 or later)."),
-    retries: z.number().int().nonnegative().optional().describe("Extra tries for a rollout that ends with no-result, no-json, thinking-only, length or schema, passed as --retries (verify 0.9.0 or later)."),
+    ids: z
+      .string()
+      .regex(/^[A-Za-z_][\w-]*\.[A-Za-z_][\w-]*$/, "ids is ARRAY.FIELD: the array of the deliverable, a dot, and the id field of each record")
+      .optional()
+      .describe(
+        "ARRAY.FIELD, passed as --ids, e.g. rows.line. The ids of the records must be the item ids of the batch in manifest.json, each once; a report that fits the schema and covers other rows ends as error ids and is sent back once (verify 0.12.9 or later). Needs a folder made by verify_batch.",
+      ),
+    retries: z.number().int().nonnegative().optional().describe("Extra tries for a rollout that ends with no-result, no-json, thinking-only, length, schema, ids or no-tool-calls, passed as --retries (verify 0.9.0 or later)."),
     nudge_timeout: z.number().int().nonnegative().optional().describe("Seconds for the one nudge that asks a stopped pi worker for its answer, passed as --nudge-timeout. 0 turns it off. Local models only (verify 0.9.0 or later)."),
     allow_compaction: z.boolean().optional().describe("true accepts a rollout whose agent compacted its context, passed as --allow-compaction. Default: such a rollout ends as compacted (verify 0.9.0 or later)."),
     max_parallel: z.number().int().positive().optional().describe("Workers at once. Default: count for a local model, the lane cap for Claude Code."),

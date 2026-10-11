@@ -258,6 +258,7 @@ export function workersArgv(input: WorkersInput): string[] {
   if (input.timeout !== undefined) args.push("--timeout", String(input.timeout));
   if (input.max_turns !== undefined) args.push("--max-turns", String(input.max_turns));
   if (input.schema) args.push("--schema", input.schema);
+  if (input.ids) args.push("--ids", input.ids);
   if (input.retries !== undefined) args.push("--retries", String(input.retries));
   if (input.nudge_timeout !== undefined) args.push("--nudge-timeout", String(input.nudge_timeout));
   if (input.allow_compaction) args.push("--allow-compaction");
