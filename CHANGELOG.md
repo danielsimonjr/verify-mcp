@@ -6,6 +6,13 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.7] - 2026-10-11
+
+### Changed
+- The pin moves to verify 0.12.10. A pi worker is sent back for its answer once for each kind of
+  failure (time, cut, format, schema, ids) instead of once in all, and with `ids` its charter lists the
+  ids of the batch. `nudge_timeout` is the budget of each nudge.
+
 ## [0.16.6] - 2026-10-11
 
 ### Added
