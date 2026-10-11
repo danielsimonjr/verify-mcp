@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.5] - 2026-10-11
+
+### Changed
+- The pin moves to verify 0.12.5. `driver.log` lines carry the local time and its UTC offset, and the manifest,
+  each `worker.json` and `result.json` name the provider and model of every role, also a Claude Code model.
+
 ## [0.16.4] - 2026-10-10
 
 ### Changed
