@@ -225,6 +225,7 @@ describe("verify_workers", () => {
       max_parallel: 2,
       env: "none",
       temperature: 0.2,
+      frequency_penalty: 0.3,
       thinking: "low",
       max_tokens: 8192,
     });
@@ -250,6 +251,7 @@ describe("verify_workers", () => {
       "--max-parallel", "2",
       "--env", "none",
       "--temperature", "0.2",
+      "--frequency-penalty", "0.3",
       "--thinking", "low",
       "--max-tokens", "8192",
     ]);
@@ -346,8 +348,8 @@ describe("verify_workers", () => {
 });
 
 describe("pin and model check", () => {
-  test("the pin is verify 0.12.10", () => {
-    expect(VERIFY_VERSION).toBe("0.12.10");
+  test("the pin is verify 0.12.11", () => {
+    expect(VERIFY_VERSION).toBe("0.12.11");
   });
 
   test("model check returns the window and its source", async () => {

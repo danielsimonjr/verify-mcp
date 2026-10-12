@@ -6,6 +6,17 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.8] - 2026-10-12
+
+### Added
+- `verify_workers` takes `frequency_penalty` (passed as `--frequency-penalty`, verify 0.12.11 or later).
+  It is not set by default.
+
+### Changed
+- The pin moves to verify 0.12.11. A pi worker loads a repeat guard that blocks a repeated read, grep,
+  find or ls call and cuts a final message that has more records than the batch has items. A pi worker
+  is sampled with temperature 0.6 when `temperature` is not set. The `temperature` description says so.
+
 ## [0.16.7] - 2026-10-11
 
 ### Changed

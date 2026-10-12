@@ -353,7 +353,13 @@ export const workersInput = z
     allow_compaction: z.boolean().optional().describe("true accepts a rollout whose agent compacted its context, passed as --allow-compaction. Default: such a rollout ends as compacted (verify 0.9.0 or later)."),
     max_parallel: z.number().int().positive().optional().describe("Workers at once. Default: count for a local model, the lane cap for Claude Code."),
     env: z.literal("none").optional().describe("Execution environment. Claude Code workers need none."),
-    temperature: localModelShape.temperature,
+    temperature: z.number().optional().describe("Sampling temperature passed as --temperature. A pi worker is sampled with 0.6 when this is unset (verify 0.12.11 or later); 0.2 made a session that had repeated a call repeat it again."),
+    frequency_penalty: z
+      .number()
+      .min(-2)
+      .max(2)
+      .optional()
+      .describe("OpenAI frequency_penalty passed as --frequency-penalty (verify 0.12.11 or later). Not set by default: it did not end a loop of repeated calls, and it works against the keys a JSON report repeats on every row."),
     thinking: z.string().min(1).optional().describe("Thinking level passed as --thinking."),
     max_tokens: localModelShape.max_tokens,
     timeout_seconds: z

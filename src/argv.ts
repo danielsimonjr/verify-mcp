@@ -265,6 +265,7 @@ export function workersArgv(input: WorkersInput): string[] {
   if (input.max_parallel !== undefined) args.push("--max-parallel", String(input.max_parallel));
   if (input.env) args.push("--env", input.env);
   if (input.temperature !== undefined) args.push("--temperature", String(input.temperature));
+  if (input.frequency_penalty !== undefined) args.push("--frequency-penalty", String(input.frequency_penalty));
   if (input.thinking) args.push("--thinking", input.thinking);
   if (input.max_tokens !== undefined) args.push("--max-tokens", String(input.max_tokens));
   return args;

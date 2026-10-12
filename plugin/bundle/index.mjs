@@ -22016,7 +22016,8 @@ var workersInput = object({
   allow_compaction: boolean2().optional().describe("true accepts a rollout whose agent compacted its context, passed as --allow-compaction. Default: such a rollout ends as compacted (verify 0.9.0 or later)."),
   max_parallel: number2().int().positive().optional().describe("Workers at once. Default: count for a local model, the lane cap for Claude Code."),
   env: literal("none").optional().describe("Execution environment. Claude Code workers need none."),
-  temperature: localModelShape.temperature,
+  temperature: number2().optional().describe("Sampling temperature passed as --temperature. A pi worker is sampled with 0.6 when this is unset (verify 0.12.11 or later); 0.2 made a session that had repeated a call repeat it again."),
+  frequency_penalty: number2().min(-2).max(2).optional().describe("OpenAI frequency_penalty passed as --frequency-penalty (verify 0.12.11 or later). Not set by default: it did not end a loop of repeated calls, and it works against the keys a JSON report repeats on every row."),
   thinking: string2().min(1).optional().describe("Thinking level passed as --thinking."),
   max_tokens: localModelShape.max_tokens,
   timeout_seconds: number2().positive().optional().describe("Wall-clock timeout for this call, in seconds. Default 43200 (12 hours).")
@@ -22297,6 +22298,8 @@ function workersArgv(input) {
     args.push("--env", input.env);
   if (input.temperature !== undefined)
     args.push("--temperature", String(input.temperature));
+  if (input.frequency_penalty !== undefined)
+    args.push("--frequency-penalty", String(input.frequency_penalty));
   if (input.thinking)
     args.push("--thinking", input.thinking);
   if (input.max_tokens !== undefined)
@@ -22379,7 +22382,7 @@ function applyBatchProfile(input, env) {
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.12.10";
+var VERIFY_VERSION = "0.12.11";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -23226,7 +23229,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.16.7";
+var SERVER_VERSION = "0.16.8";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts
