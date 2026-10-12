@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.9] - 2026-10-12
+
+### Changed
+- The pin moves to verify 0.12.12. A pi worker is stopped after three turns in which every tool call
+  failed (the error `stuck`), each tool result is cut to the room that is left before compaction, a final message
+  with broken JSON is sent back with the place where it breaks, and with `ids` the output limit follows
+  the size of the batch. `retries` also runs a `stuck` or a `compacted` rollout again.
+
 ## [0.16.8] - 2026-10-12
 
 ### Added
