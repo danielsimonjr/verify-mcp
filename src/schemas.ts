@@ -26,8 +26,8 @@ const laneCaps = z
   .object(Object.fromEntries(LANES.map((lane) => [lane, laneCap.optional()])) as Record<(typeof LANES)[number], z.ZodOptional<typeof laneCap>>)
   .strict();
 
-// verify's parseContextSize and --role-context-size refuse 4096 or less at parse time: pi withholds
-// 4096 tokens of every window.
+// verify's parseContextSize and --role-context-size refuse 4096 or less at parse time: a window of that
+// size holds no verifier task and a reply.
 const serverContextSize = z
   .union([z.number().int().gt(4096, "context_size must be above 4096"), z.literal("auto")])
   .optional();

@@ -6,6 +6,13 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.12] - 2026-10-12
+
+### Changed
+- The pin moves to verify 0.12.15. The warning for a window at or below 16384 tokens says that every
+  tool result is cut to 1000 characters, which is what a session measured at that size does; it no
+  longer says that every rollout compacts. The floor for `context_size` is the same: above 4096.
+
 ## [0.16.11] - 2026-10-12
 
 ### Changed
