@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.11] - 2026-10-12
+
+### Changed
+- The pin moves to verify 0.12.14. A pi worker whose final message is a tool call written as text (prose
+  before the call, or a value that is not JSON) is sent back once, on a turn that offers the tools, with
+  the reason that the call did not run. The guard cuts a message that writes a second such call. The
+  nudge kinds of `nudge_timeout` are now time, cut, stuck, format, json, schema, ids and call.
+
 ## [0.16.10] - 2026-10-12
 
 ### Changed

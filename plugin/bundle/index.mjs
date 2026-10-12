@@ -22012,7 +22012,7 @@ var workersInput = object({
   schema: string2().min(1).optional().describe("A JSON Schema file, passed as --schema. A deliverable that parses but does not fit it ends as error schema (verify 0.9.0 or later)."),
   ids: string2().regex(/^[A-Za-z_][\w-]*\.[A-Za-z_][\w-]*$/, "ids is ARRAY.FIELD: the array of the deliverable, a dot, and the id field of each record").optional().describe("ARRAY.FIELD, passed as --ids, e.g. rows.line. The ids of the records must be the item ids of the batch in manifest.json, each once; a report that fits the schema and covers other rows ends as error ids and is sent back once (verify 0.12.9 or later). Needs a folder made by verify_batch."),
   retries: number2().int().nonnegative().optional().describe("Extra tries for a rollout that ends with no-result, no-json, thinking-only, length, schema, ids, no-tool-calls, stuck or compacted, passed as --retries (verify 0.9.0 or later; stuck and compacted are retried from verify 0.12.12)."),
-  nudge_timeout: number2().int().nonnegative().optional().describe("Seconds for each nudge that asks a pi worker for its answer, passed as --nudge-timeout. A worker is sent back once for each kind of failure: time, cut, format, schema, ids (verify 0.12.10 or later). 0 turns it off. Local models only (verify 0.9.0 or later)."),
+  nudge_timeout: number2().int().nonnegative().optional().describe("Seconds for each nudge that asks a pi worker for its answer, passed as --nudge-timeout. A worker is sent back once for each kind of failure: time, cut, stuck, format, json, schema, ids, call (verify 0.12.14 or later; the call nudge keeps the tools and has the time of a first turn). 0 turns it off. Local models only (verify 0.9.0 or later)."),
   allow_compaction: boolean2().optional().describe("true accepts a rollout whose agent compacted its context, passed as --allow-compaction. Default: such a rollout ends as compacted (verify 0.9.0 or later)."),
   max_parallel: number2().int().positive().optional().describe("Workers at once. Default: count for a local model, the lane cap for Claude Code."),
   env: literal("none").optional().describe("Execution environment. Claude Code workers need none."),
@@ -22382,7 +22382,7 @@ function applyBatchProfile(input, env) {
 
 // src/pin.ts
 var VERIFY_PACKAGE = "@danielsimonjr/verify";
-var VERIFY_VERSION = "0.12.13";
+var VERIFY_VERSION = "0.12.14";
 var VERIFY_SPEC = `${VERIFY_PACKAGE}@${VERIFY_VERSION}`;
 
 // src/resolve.ts
@@ -23229,7 +23229,7 @@ ${read.text}${note}`, structured };
 // src/protocol.ts
 var PROTOCOL_VERSION = "2026-07-28";
 var SERVER_NAME = "verify";
-var SERVER_VERSION = "0.16.10";
+var SERVER_VERSION = "0.16.11";
 var SERVER_INSTRUCTIONS = "Tools wrap the veriharness CLI from danielsimonjr/verify. " + "A task directory must contain rollouts/. Local models use provider ollama " + "(default http://127.0.0.1:11434) or llamacpp (default http://127.0.0.1:8080). " + "Claude Code uses provider claude-code with a full model id, or any of the four runner lanes; " + "both need env none and use the login Claude Code holds. " + "Long tools report progress and stop at their timeout. " + "verify_model_check probes a local server or Claude Code before a run. " + "verify_list_runs and verify_read_result read the runs directory; " + "they do not accept arbitrary paths.";
 
 // src/server.ts
