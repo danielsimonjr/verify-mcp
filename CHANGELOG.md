@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.10] - 2026-10-12
+
+### Changed
+- The pin moves to verify 0.12.13. A pi worker is stopped when a tool call holds the answer records (the
+  error `stuck`, then the nudge with no tools), a call with an argument that the tool does not list is
+  blocked with the arguments it takes, a message that the guard cut is sent back with the reason, and a
+  final message with broken JSON is named at the place where it breaks in every case.
+
 ## [0.16.9] - 2026-10-12
 
 ### Changed
